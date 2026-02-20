@@ -54,25 +54,36 @@ This package handles communication with your Firefly III instance.
 
 ## Phase 4: HTTP Handlers (Routing)
 
-Use Go 1.22's enhanced `net/http.ServeMux` to handle routing.
+Use Go 1.22's enhanced `net/http.ServeMux` to handle routing. You'll need to fetch the user's accounts on the initial page load so they can select the target account for the import.
 
-1. **`GET /` (IndexHandler):** Parses and executes the `index.html` template, rendering the upload form.
+1. **`GET /` (IndexHandler):** * Calls a new `firefly.GetAccounts()` method to fetch a list of your asset/bank accounts from Firefly III (via `GET /api/v1/accounts?type=asset`).
+   * Parses the `index.html` template and passes the retrieved slice of `Account` structs to it.
 2. **`POST /upload` (UploadHandler):**
    * Parses the multipart form (`r.ParseMultipartForm`).
+   * Extracts the `account_id` selected by the user from the form data (`r.FormValue("account_id")`).
    * Routes the file to the `parser` package based on its MIME type or extension.
    * Runs the parsed transactions through the deduplication logic.
-   * Concurrently or sequentially pushes new transactions via the `firefly` package.
-   * Passes the final slice of results to the `index.html` template to render the table.
+   * Pushes new transactions via `firefly.StoreTransaction(tx, accountID)`, ensuring the selected account is set as the source or destination depending on the transaction type.
+   * Passes the final slice of results back to the `index.html` template to render the table.
 
 ---
 
 ## Phase 5: The User Interface (HTML Templates + Tailwind)
 
-Use Go's `html/template` package to inject data into a single-page UI. We will use the Tailwind CSS Play CDN for rapid prototyping, utilizing utility classes for a "headless" component feel.
+Use Go's `html/template` package to inject data into the single-page UI. We will use the Tailwind CSS CDN for rapid styling.
 
 * **Template Setup:** Create a `templates/index.html` file. Include `<script src="https://cdn.tailwindcss.com"></script>` in the head.
-* **Upload Section:** * A semantic form (`<form enctype="multipart/form-data" method="POST" action="/upload">`).
-  * Style the file input and submit button using Tailwind utilities (e.g., `file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100`).
+* **Upload Section:** * Create a semantic form: `<form enctype="multipart/form-data" method="POST" action="/upload" class="space-y-4">`.
+  * **Account Dropdown:** Add a select menu for the target account. Use Go template tags to iterate over the accounts fetched in Phase 4:
+    ```html
+    <select name="account_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+      {{ range .Accounts }}
+        <option value="{{ .ID }}">{{ .Name }}</option>
+      {{ end }}
+    </select>
+    ```
+  * **File Input:** Style the file input using Tailwind utilities (e.g., `file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100`).
+  * **Submit Button:** A standard styled button (`bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded`).
 * **Results Section:** * Use Go template tags (`{{ if .Results }}`) to conditionally display a table.
   * Iterate over results (`{{ range .Results }}`).
-  * Apply Tailwind classes for row styling based on status: `bg-green-50` for Added, `bg-gray-50` for Skipped, `bg-red-50` for Error.
+  * Apply Tailwind classes for row styling based on status: `bg-green-50` for Added, `bg-yellow-50` for Skipped (Duplicate), `bg-red-50` for Error.
