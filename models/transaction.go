@@ -12,9 +12,11 @@ const (
 
 // Transaction represents a single financial transaction
 type Transaction struct {
-	Date        string            `json:"date"` // Format: YYYY-MM-DD
-	Description string            `json:"description"`
-	Amount      float64           `json:"amount"` // Absolute value
-	Type        string            `json:"type"`   // "withdrawal" or "deposit"
-	Status      TransactionStatus `json:"status,omitempty"`
+	Date            string            `json:"date"` // Format: YYYY-MM-DD
+	Description     string            `json:"description"`
+	Amount          float64           `json:"amount"` // Absolute value
+	Type            string            `json:"type"`   // "withdrawal" or "deposit"
+	SourceName      string            `json:"source_name,omitempty"`
+	DestinationName string            `json:"destination_name,omitempty"`
+	Status          TransactionStatus `json:"status,omitempty"`
 }

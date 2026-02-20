@@ -34,18 +34,21 @@ type fireflyTransactionResponse struct {
 	Data []struct {
 		Attributes struct {
 			Transactions []struct {
-				Date        string `json:"date"`
-				Description string `json:"description"`
-				Amount      string `json:"amount"` // Note: Firefly amount is often a string
-				Type        string `json:"type"`
+				Date            string `json:"date"`
+				Description     string `json:"description"`
+				Amount          string `json:"amount"` // Note: Firefly amount is often a string
+				Type            string `json:"type"`
+				SourceName      string `json:"source_name"`
+				DestinationName string `json:"destination_name"`
 			} `json:"transactions"`
 		} `json:"attributes"`
 	} `json:"data"`
 }
 
 // GetRecentTransactions fetches recent transactions for deduplication purposes
-func (c *Client) GetRecentTransactions() ([]models.Transaction, error) {
-	req, err := http.NewRequest("GET", c.BaseURL+"/transactions", nil)
+func (c *Client) GetRecentTransactions(daysOffset int) ([]models.Transaction, error) {
+	startDate := time.Now().AddDate(0, 0, -daysOffset).Format("2006-01-02")
+	req, err := http.NewRequest("GET", c.BaseURL+"/transactions?start="+startDate, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -78,11 +81,13 @@ func (c *Client) GetRecentTransactions() ([]models.Transaction, error) {
 			fmt.Sscanf(tx.Amount, "%f", &amount)
 
 			transactions = append(transactions, models.Transaction{
-				Date:        tx.Date[:10], // Assuming date format like 2023-01-01T00:00:00Z
-				Description: tx.Description,
-				Amount:      amount,
-				Type:        tx.Type,
-				Status:      models.StatusAdded, // existing transactions are "added"
+				Date:            tx.Date[:10], // Assuming date format like 2023-01-01T00:00:00Z
+				Description:     tx.Description,
+				Amount:          amount,
+				Type:            tx.Type,
+				SourceName:      tx.SourceName,
+				DestinationName: tx.DestinationName,
+				Status:          models.StatusAdded, // existing transactions are "added"
 			})
 		}
 	}
@@ -96,11 +101,12 @@ type fireflyStoreTransactionRequest struct {
 }
 
 type storeTx struct {
-	Date        string `json:"date"` // YYYY-MM-DD
-	Description string `json:"description"`
-	Amount      string `json:"amount"`
-	Type        string `json:"type"`
-	// Additional fields like source/destination accounts would go here in a full app
+	Date            string `json:"date"` // YYYY-MM-DD
+	Description     string `json:"description"`
+	Amount          string `json:"amount"`
+	Type            string `json:"type"`
+	SourceName      string `json:"source_name,omitempty"`
+	DestinationName string `json:"destination_name,omitempty"`
 }
 
 // StoreTransaction posts a single transaction to Firefly III
@@ -108,10 +114,12 @@ func (c *Client) StoreTransaction(tx models.Transaction) error {
 	payload := fireflyStoreTransactionRequest{
 		Transactions: []storeTx{
 			{
-				Date:        tx.Date,
-				Description: tx.Description,
-				Amount:      fmt.Sprintf("%.2f", tx.Amount),
-				Type:        tx.Type,
+				Date:            tx.Date,
+				Description:     tx.Description,
+				Amount:          fmt.Sprintf("%.2f", tx.Amount),
+				Type:            tx.Type,
+				SourceName:      tx.SourceName,
+				DestinationName: tx.DestinationName,
 			},
 		},
 	}

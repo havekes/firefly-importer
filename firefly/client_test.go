@@ -16,6 +16,9 @@ func TestGetRecentTransactions(t *testing.T) {
 		if r.URL.Path != "/transactions" {
 			t.Errorf("Expected path /transactions, got %s", r.URL.Path)
 		}
+		if r.URL.Query().Get("start") == "" {
+			t.Errorf("Expected start query parameter to be set")
+		}
 		if r.Header.Get("Authorization") != "Bearer test-token" {
 			t.Errorf("Expected Bearer test-token, got %s", r.Header.Get("Authorization"))
 		}
@@ -29,7 +32,9 @@ func TestGetRecentTransactions(t *testing.T) {
 								"date": "2023-12-01T00:00:00+00:00",
 								"description": "Internet Bill",
 								"amount": "60.00",
-								"type": "withdrawal"
+								"type": "withdrawal",
+								"source_name": "Checking Account",
+								"destination_name": "ISP"
 							}
 						]
 					}
@@ -43,7 +48,7 @@ func TestGetRecentTransactions(t *testing.T) {
 	defer mockServer.Close()
 
 	client := NewClient(mockServer.URL, "test-token")
-	txs, err := client.GetRecentTransactions()
+	txs, err := client.GetRecentTransactions(30)
 
 	if err != nil {
 		t.Fatalf("GetRecentTransactions failed: %v", err)
@@ -61,6 +66,12 @@ func TestGetRecentTransactions(t *testing.T) {
 	}
 	if txs[0].Description != "Internet Bill" {
 		t.Errorf("Expected Description Internet Bill, got %s", txs[0].Description)
+	}
+	if txs[0].SourceName != "Checking Account" {
+		t.Errorf("Expected SourceName Checking Account, got %s", txs[0].SourceName)
+	}
+	if txs[0].DestinationName != "ISP" {
+		t.Errorf("Expected DestinationName ISP, got %s", txs[0].DestinationName)
 	}
 	if txs[0].Status != models.StatusAdded {
 		t.Errorf("Expected status %s, got %s", models.StatusAdded, txs[0].Status)
@@ -92,6 +103,12 @@ func TestStoreTransaction(t *testing.T) {
 		if tx.Amount != "12.50" { // Should be formatted to string
 			t.Errorf("Expected amount string '12.50', got %s", tx.Amount)
 		}
+		if tx.SourceName != "Wallet" {
+			t.Errorf("Expected SourceName 'Wallet', got %s", tx.SourceName)
+		}
+		if tx.DestinationName != "Restaurant" {
+			t.Errorf("Expected DestinationName 'Restaurant', got %s", tx.DestinationName)
+		}
 
 		w.WriteHeader(http.StatusCreated)
 	}))
@@ -100,10 +117,12 @@ func TestStoreTransaction(t *testing.T) {
 	client := NewClient(mockServer.URL, "test-token")
 
 	newTx := models.Transaction{
-		Date:        "2023-12-05",
-		Description: "Lunch",
-		Amount:      12.50,
-		Type:        "withdrawal",
+		Date:            "2023-12-05",
+		Description:     "Lunch",
+		Amount:          12.50,
+		Type:            "withdrawal",
+		SourceName:      "Wallet",
+		DestinationName: "Restaurant",
 	}
 
 	err := client.StoreTransaction(newTx)
