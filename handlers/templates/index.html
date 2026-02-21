@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,21 +13,26 @@
     .htmx-indicator {
       display: none;
     }
+
     .htmx-request .htmx-indicator {
       display: inline-block;
     }
+
     .htmx-request.htmx-indicator {
       display: inline-block;
     }
   </style>
 </head>
+
 <body class="min-h-screen bg-base-200 text-base-content font-sans flex flex-col items-center">
 
   <!-- Header -->
   <header class="navbar bg-primary text-white shadow-md flex justify-center">
     <div class="container px-6 w-full flex items-center gap-3">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 shrink-0" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
       <div>
         <h1 class="text-xl font-bold leading-tight">Firefly III Statement Importer</h1>
@@ -40,7 +46,10 @@
     <!-- Error Banner -->
     {{ if .Error }}
     <div class="alert alert-error">
-      <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
       <span>{{ .Error }}</span>
     </div>
     {{ end }}
@@ -51,7 +60,9 @@
         <h2 class="card-title mb-1">Upload Statement</h2>
         <p class="text-sm text-base-content/70 mb-5">Supported formats: CSV, PNG, JPG</p>
 
-        <form hx-post="/upload" hx-encoding="multipart/form-data" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" class="flex flex-col sm:flex-row sm:items-end gap-8">
+        <form hx-post="/upload" hx-encoding="multipart/form-data" hx-target="#main-content" hx-select="#main-content"
+          hx-swap="outerHTML" class="flex flex-col sm:flex-row sm:items-end gap-8">
+          {{ .CSRFField }}
 
           <!-- Account Dropdown -->
           <div class="form-control w-full sm:w-auto sm:flex-1 max-w-xs">
@@ -60,11 +71,11 @@
             </label>
             <select id="account_id" name="account_id" class="select select-bordered w-full" required>
               {{ if .Accounts }}
-                {{ range .Accounts }}
-                  <option value="{{ .ID }}">{{ .Name }}</option>
-                {{ end }}
+              {{ range .Accounts }}
+              <option value="{{ .ID }}">{{ .Name }}</option>
+              {{ end }}
               {{ else }}
-                <option disabled value="">No accounts available</option>
+              <option disabled value="">No accounts available</option>
               {{ end }}
             </select>
           </div>
@@ -74,14 +85,17 @@
             <label for="file" class="label">
               <span class="label-text font-medium">Statement File</span>
             </label>
-            <input id="file" name="file" type="file" accept=".csv,.png,.jpg,.jpeg" class="file-input file-input-bordered file-input-primary w-full" required />
+            <input id="file" name="file" type="file" accept=".csv,.png,.jpg,.jpeg"
+              class="file-input file-input-bordered file-input-primary w-full" required />
           </div>
 
           <!-- Submit -->
           <div class="w-full sm:w-auto">
             <button type="submit" class="btn btn-primary w-full sm:w-auto">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
               Parse &amp; Preview
               <span class="htmx-indicator loading loading-spinner loading-sm ml-2"></span>
@@ -95,20 +109,20 @@
     <!-- Datalists for Budgets and Categories -->
     <datalist id="budgets-list">
       {{ range .Budgets }}
-        <option value="{{ .Name }}"></option>
+      <option value="{{ .Name }}"></option>
       {{ end }}
     </datalist>
 
     <datalist id="categories-list">
       {{ range .Categories }}
-        <option value="{{ .Name }}"></option>
+      <option value="{{ .Name }}"></option>
       {{ end }}
     </datalist>
 
     <!-- Results Section -->
     {{ if .Results }}
     <section x-data="{
-        transactions: {{ .ResultsJSON }},
+        transactions: JSON.parse($el.dataset.transactions),
         selectedIndices: [],
         isSaving: false,
         get selectedCount() {
@@ -138,19 +152,23 @@
             });
             document.getElementById('save-payload').value = JSON.stringify({ transactions: payload });
         }
-    }" x-init="toggleAll(true)" class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
-      
-      <form hx-post="/save" hx-target="#save-result-container" hx-swap="innerHTML" @submit="preparePayload(); isSaving = true" @htmx:after-request="isSaving = false">
-        
+    }" x-init="toggleAll(true)" class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden"
+      data-transactions="{{ .ResultsJSON }}">
+
+      <form hx-post="/save" hx-target="#save-result-container" hx-swap="innerHTML"
+        @submit="preparePayload(); isSaving = true" @htmx:after-request="isSaving = false">
+        {{ .CSRFField }}
         <input type="hidden" id="save-payload" name="payload" value='' />
 
-        <div class="px-6 py-4 border-b border-base-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div
+          class="px-6 py-4 border-b border-base-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 class="text-lg font-semibold">Preview Results</h2>
             <p class="text-sm text-base-content/70">Review before saving to Firefly III</p>
           </div>
           <button type="submit" class="btn btn-success" :disabled="selectedCount === 0 || isSaving">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" x-show="!isSaving">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor" stroke-width="2" x-show="!isSaving">
               <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
             </svg>
             <span class="loading loading-spinner loading-sm" x-show="isSaving" style="display: none;"></span>
@@ -166,8 +184,7 @@
             <thead class="bg-base-200 text-base-content">
               <tr>
                 <th class="w-12 text-center">
-                  <input type="checkbox" class="checkbox checkbox-sm checkbox-success"
-                    :checked="allSelected"
+                  <input type="checkbox" class="checkbox checkbox-sm checkbox-success" :checked="allSelected"
                     @change="toggleAll($event.target.checked)" />
                 </th>
                 <th>Date</th>
@@ -187,35 +204,35 @@
                   'bg-error/10': tx.status === 'Error'
                 }">
                   <td class="text-center">
-                    <input type="checkbox"
-                      class="checkbox checkbox-sm checkbox-success"
-                      x-show="tx.status === 'Added'"
-                      :value="i"
-                      x-model="selectedIndices" />
+                    <input type="checkbox" class="checkbox checkbox-sm checkbox-success" x-show="tx.status === 'Added'"
+                      :value="i" x-model="selectedIndices" />
                   </td>
                   <td class="whitespace-nowrap font-mono text-base-content" x-text="tx.date"></td>
                   <td class="text-base-content" x-text="tx.description"></td>
-                  <td class="text-right font-medium" :class="tx.status === 'Added' ? 'text-success' : 'text-base-content'" x-text="parseFloat(tx.amount).toFixed(2)"></td>
+                  <td class="text-right font-medium"
+                    :class="tx.status === 'Added' ? 'text-success' : 'text-base-content'"
+                    x-text="parseFloat(tx.amount).toFixed(2)"></td>
                   <td class="capitalize text-base-content/80" x-text="tx.type"></td>
                   <td>
-                    <input type="text" list="budgets-list" :data-index="i" x-show="tx.status === 'Added'" class="tx-budget input input-bordered input-sm w-full max-w-xs" placeholder="Budget...">
+                    <input type="text" list="budgets-list" :data-index="i" x-show="tx.status === 'Added'"
+                      class="tx-budget input input-bordered input-sm w-full max-w-xs" placeholder="Budget...">
                   </td>
                   <td>
-                    <input type="text" list="categories-list" :data-index="i" x-show="tx.status === 'Added'" class="tx-category input input-bordered input-sm w-full max-w-xs" placeholder="Category...">
+                    <input type="text" list="categories-list" :data-index="i" x-show="tx.status === 'Added'"
+                      class="tx-category input input-bordered input-sm w-full max-w-xs" placeholder="Category...">
                   </td>
                   <td>
-                    <span class="badge font-medium whitespace-nowrap gap-1"
-                      :class="{
+                    <span class="badge font-medium whitespace-nowrap gap-1" :class="{
                         'badge-success': tx.status === 'Added',
                         'badge-warning': tx.status === 'Skipped (Duplicate)',
                         'badge-error': tx.status === 'Error',
                         'badge-neutral': !['Added', 'Skipped (Duplicate)', 'Error'].includes(tx.status)
-                      }"
-                    >
-                        <span x-show="tx.status === 'Added'">✓ Added</span>
-                        <span x-show="tx.status === 'Skipped (Duplicate)'">⟳ Duplicate</span>
-                        <span x-show="tx.status === 'Error'">✕ Error</span>
-                        <span x-show="!['Added', 'Skipped (Duplicate)', 'Error'].includes(tx.status)" x-text="tx.status"></span>
+                      }">
+                      <span x-show="tx.status === 'Added'">✓ Added</span>
+                      <span x-show="tx.status === 'Skipped (Duplicate)'">⟳ Duplicate</span>
+                      <span x-show="tx.status === 'Error'">✕ Error</span>
+                      <span x-show="!['Added', 'Skipped (Duplicate)', 'Error'].includes(tx.status)"
+                        x-text="tx.status"></span>
                     </span>
                   </td>
                 </tr>
@@ -240,4 +257,5 @@
     </aside>
   </footer>
 </body>
+
 </html>

@@ -15,6 +15,8 @@ import (
 	"firefly-importer/firefly"
 	"firefly-importer/models"
 	"firefly-importer/parser"
+
+	"github.com/gorilla/csrf"
 )
 
 type PageData struct {
@@ -22,7 +24,8 @@ type PageData struct {
 	Budgets     []models.Budget
 	Categories  []models.Category
 	Results     []models.Transaction
-	ResultsJSON template.JS // safe JSON for inline <script>
+	ResultsJSON string // safe JSON for data attribute
+	CSRFField   template.HTML
 	Error       string
 }
 
@@ -38,16 +41,11 @@ func NewAppHandler(client *firefly.Client, cfg *config.Config) *AppHandler {
 	}
 }
 
-// renderPage parses and executes the index.html template with the given data.
-func renderPage(w http.ResponseWriter, data PageData) {
-	tmpl, err := template.ParseFS(templateFS, "templates/index.html")
-	if err != nil {
-		log.Printf("template parse error: %v", err)
-		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
-		return
-	}
+// renderPage executes the pre-parsed index.html template with the given data.
+func renderPage(w http.ResponseWriter, r *http.Request, data PageData) {
+	data.CSRFField = csrf.TemplateField(r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.Execute(w, data); err != nil {
+	if err := Templates.ExecuteTemplate(w, "index.html", data); err != nil {
 		// Headers already sent; log only.
 		log.Printf("template execute error: %v", err)
 	}
@@ -59,23 +57,17 @@ type SaveResultData struct {
 	Error string
 }
 
-// renderSaveResult parses and executes the save_result.html template snippet.
+// renderSaveResult executes the pre-parsed save_result.html template snippet.
 func renderSaveResult(w http.ResponseWriter, data SaveResultData) {
-	tmpl, err := template.ParseFS(templateFS, "templates/save_result.html")
-	if err != nil {
-		log.Printf("template parse error: %v", err)
-		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
-		return
-	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.ExecuteTemplate(w, "save-result", data); err != nil {
+	if err := Templates.ExecuteTemplate(w, "save-result", data); err != nil {
 		log.Printf("template execute error: %v", err)
 	}
 }
 
 // renderError logs the error and renders the index page with an error banner.
 // It fetches accounts so the upload form remains functional.
-func (h *AppHandler) renderError(w http.ResponseWriter, statusCode int, msg string, err error) {
+func (h *AppHandler) renderError(w http.ResponseWriter, r *http.Request, statusCode int, msg string, err error) {
 	if err != nil {
 		log.Printf("error: %s: %v", msg, err)
 	} else {
@@ -92,7 +84,7 @@ func (h *AppHandler) renderError(w http.ResponseWriter, statusCode int, msg stri
 	w.WriteHeader(statusCode)
 
 	accounts, _ := h.Client.GetAccounts() // best-effort; ignore error here
-	renderPage(w, PageData{
+	renderPage(w, r, PageData{
 		Accounts: accounts,
 		Error:    errMsg,
 	})
@@ -102,33 +94,33 @@ func (h *AppHandler) renderError(w http.ResponseWriter, statusCode int, msg stri
 func (h *AppHandler) IndexHandler(w http.ResponseWriter, r *http.Request) {
 	accounts, err := h.Client.GetAccounts()
 	if err != nil {
-		h.renderError(w, http.StatusInternalServerError, "Failed to fetch accounts", err)
+		h.renderError(w, r, http.StatusInternalServerError, "Failed to fetch accounts", err)
 		return
 	}
 
-	renderPage(w, PageData{Accounts: accounts})
+	renderPage(w, r, PageData{Accounts: accounts})
 }
 
 // UploadHandler handles POST /upload
 func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB limit
-		h.renderError(w, http.StatusBadRequest, "Failed to parse form", err)
+		h.renderError(w, r, http.StatusBadRequest, "Failed to parse form", err)
 		return
 	}
 
 	accountIDStr := r.FormValue("account_id")
 	if accountIDStr == "" {
-		h.renderError(w, http.StatusBadRequest, "account_id is required", nil)
+		h.renderError(w, r, http.StatusBadRequest, "account_id is required", nil)
 		return
 	}
 	if _, err := strconv.Atoi(accountIDStr); err != nil {
-		h.renderError(w, http.StatusBadRequest, "account_id must be a valid numeric ID", err)
+		h.renderError(w, r, http.StatusBadRequest, "account_id must be a valid numeric ID", err)
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		h.renderError(w, http.StatusBadRequest, "Failed to get file from form", err)
+		h.renderError(w, r, http.StatusBadRequest, "Failed to get file from form", err)
 		return
 	}
 	defer file.Close()
@@ -144,19 +136,19 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	case ".png", ".jpg", ".jpeg":
 		parsedTransactions, parseErr = parser.ParseImage(file, h.Config.VisionAPIURL, h.Config.VisionAPIKey, h.Config.VisionModel)
 	default:
-		h.renderError(w, http.StatusBadRequest, fmt.Sprintf("Unsupported file type: %q", ext), nil)
+		h.renderError(w, r, http.StatusBadRequest, fmt.Sprintf("Unsupported file type: %q", ext), nil)
 		return
 	}
 
 	if parseErr != nil {
-		h.renderError(w, http.StatusInternalServerError, "Failed to parse file", parseErr)
+		h.renderError(w, r, http.StatusInternalServerError, "Failed to parse file", parseErr)
 		return
 	}
 
 	// Fetch existing transactions for deduplication
 	existingTransactions, err := h.Client.GetRecentTransactions(accountIDStr, 30)
 	if err != nil {
-		h.renderError(w, http.StatusInternalServerError, "Failed to fetch recent transactions", err)
+		h.renderError(w, r, http.StatusInternalServerError, "Failed to fetch recent transactions", err)
 		return
 	}
 
@@ -178,7 +170,7 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Encode results as JSON for the inline <script> block
 	jsonBytes, err := json.Marshal(results)
 	if err != nil {
-		h.renderError(w, http.StatusInternalServerError, "Failed to encode results", err)
+		h.renderError(w, r, http.StatusInternalServerError, "Failed to encode results", err)
 		return
 	}
 
@@ -200,12 +192,12 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to re-fetch categories: %v", err)
 	}
 
-	renderPage(w, PageData{
+	renderPage(w, r, PageData{
 		Accounts:    accounts,
 		Budgets:     budgets,
 		Categories:  categories,
 		Results:     results,
-		ResultsJSON: template.JS(jsonBytes),
+		ResultsJSON: string(jsonBytes),
 	})
 }
 
@@ -230,7 +222,7 @@ func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req SaveRequest
 	if err := json.Unmarshal([]byte(payload), &req); err != nil {
-		log.Printf("SaveHandler: failed to parse payload JSON: %v. payload=%s", err, payload)
+		log.Printf("SaveHandler: failed to parse payload JSON: %v", err)
 		renderSaveResult(w, SaveResultData{Error: fmt.Sprintf("Failed to parse request payload: %v", err)})
 		return
 	}

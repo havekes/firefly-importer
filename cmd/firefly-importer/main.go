@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"firefly-importer/config"
 	"firefly-importer/firefly"
 	"firefly-importer/handlers"
+
+	"github.com/gorilla/csrf"
 )
 
 // setupRouter configures the dependencies and routes
@@ -31,8 +34,18 @@ func main() {
 
 	mux := setupRouter(cfg)
 
+	// Generate a 32-byte random key for CSRF
+	csrfKey := make([]byte, 32)
+	if _, err := rand.Read(csrfKey); err != nil {
+		log.Fatalf("Failed to generate CSRF key: %v", err)
+	}
+
+	// Wrap the mux with CSRF protection middleware
+	// Setting Secure(false) since local development typically runs over HTTP
+	csrfMiddleware := csrf.Protect(csrfKey, csrf.Secure(false))
+
 	serverAddr := fmt.Sprintf(":%s", cfg.Port)
-	if err := http.ListenAndServe(serverAddr, mux); err != nil {
+	if err := http.ListenAndServe(serverAddr, csrfMiddleware(mux)); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }
