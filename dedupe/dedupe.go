@@ -9,7 +9,7 @@ import (
 // GenerateHash generates a SHA-256 hash for a transaction based on Date, Description, and Amount
 func GenerateHash(tx models.Transaction) string {
 	// We format the amount predictably to avoid floating point inconsistencies
-	data := fmt.Sprintf("%s|%s|%.2f", tx.Date, tx.Description, tx.Amount)
+	data := fmt.Sprintf("%s|%s|%.2f|%s|%s", tx.Date, tx.Description, tx.Amount, tx.Type, tx.SourceName)
 	hash := sha256.Sum256([]byte(data))
 	return fmt.Sprintf("%x", hash)
 }
@@ -17,7 +17,7 @@ func GenerateHash(tx models.Transaction) string {
 // Filter compares incoming transactions against existing ones and updates their status
 func Filter(incoming []models.Transaction, existing []models.Transaction) []models.Transaction {
 	// Create a map of existing hashes for O(1) lookup
-	existingHashes := make(map[string]bool)
+	existingHashes := make(map[string]bool, len(existing))
 	for _, tx := range existing {
 		hash := GenerateHash(tx)
 		existingHashes[hash] = true
@@ -38,6 +38,7 @@ func Filter(incoming []models.Transaction, existing []models.Transaction) []mode
 			result[i].Status = models.StatusSkipped
 		} else {
 			result[i].Status = models.StatusAdded
+			existingHashes[hash] = true
 		}
 	}
 
