@@ -257,12 +257,8 @@
           const budgetInput = document.querySelector(`.tx-budget[data-budget-index="${index}"]`);
           const categoryInput = document.querySelector(`.tx-category[data-category-index="${index}"]`);
 
-          if (budgetInput && budgetInput.value.trim() !== "") {
-            tx.budget_name = budgetInput.value.trim();
-          }
-          if (categoryInput && categoryInput.value.trim() !== "") {
-            tx.category_name = categoryInput.value.trim();
-          }
+          tx.budget_name = budgetInput ? budgetInput.value.trim() : "";
+          tx.category_name = categoryInput ? categoryInput.value.trim() : "";
 
           return tx;
         });

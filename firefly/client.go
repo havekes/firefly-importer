@@ -150,37 +150,79 @@ func (c *Client) GetAccounts() ([]models.Account, error) {
 	return accounts, nil
 }
 
+type basicResource struct {
+	ID         string `json:"id"`
+	Attributes struct {
+		Name string `json:"name"`
+	} `json:"attributes"`
+}
+
+type paginatedResponse struct {
+	Data []basicResource `json:"data"`
+	Meta struct {
+		Pagination struct {
+			TotalPages  int `json:"total_pages"`
+			CurrentPage int `json:"current_page"`
+		} `json:"pagination"`
+	} `json:"meta"`
+}
+
+func (c *Client) getPaginatedBasicResources(endpoint string) ([]basicResource, error) {
+	var allResources []basicResource
+	page := 1
+
+	for {
+		url := fmt.Sprintf("%s%s?page=%d", c.BaseURL, endpoint, page)
+
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+		req.Header.Set("Accept", "application/vnd.api+json")
+
+		resp, err := c.HTTPClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("request failed: %w", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			bodyBytes, err := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if err != nil {
+				return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
+			}
+			return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+		}
+
+		var pageResp paginatedResponse
+		if err := json.NewDecoder(resp.Body).Decode(&pageResp); err != nil {
+			resp.Body.Close()
+			return nil, fmt.Errorf("failed to decode response: %w", err)
+		}
+		resp.Body.Close()
+
+		allResources = append(allResources, pageResp.Data...)
+
+		if pageResp.Meta.Pagination.TotalPages == 0 || page >= pageResp.Meta.Pagination.TotalPages {
+			break
+		}
+		page++
+	}
+
+	return allResources, nil
+}
+
 // GetBudgets fetches budgets from Firefly III
 func (c *Client) GetBudgets() ([]models.Budget, error) {
-	req, err := http.NewRequest("GET", c.BaseURL+"/budgets", nil)
+	resources, err := c.getPaginatedBasicResources("/budgets")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+c.Token)
-	req.Header.Set("Accept", "application/vnd.api+json")
-
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
-		}
-		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	var fireflyResp models.BudgetResponse
-	if err := json.NewDecoder(resp.Body).Decode(&fireflyResp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, err
 	}
 
 	var budgets []models.Budget
-	for _, item := range fireflyResp.Data {
+	for _, item := range resources {
 		budgets = append(budgets, models.Budget{
 			ID:   item.ID,
 			Name: item.Attributes.Name,
@@ -192,35 +234,13 @@ func (c *Client) GetBudgets() ([]models.Budget, error) {
 
 // GetCategories fetches categories from Firefly III
 func (c *Client) GetCategories() ([]models.Category, error) {
-	req, err := http.NewRequest("GET", c.BaseURL+"/categories", nil)
+	resources, err := c.getPaginatedBasicResources("/categories")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+c.Token)
-	req.Header.Set("Accept", "application/vnd.api+json")
-
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
-		}
-		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	var fireflyResp models.CategoryResponse
-	if err := json.NewDecoder(resp.Body).Decode(&fireflyResp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, err
 	}
 
 	var categories []models.Category
-	for _, item := range fireflyResp.Data {
+	for _, item := range resources {
 		categories = append(categories, models.Category{
 			ID:   item.ID,
 			Name: item.Attributes.Name,
