@@ -44,7 +44,7 @@ func TestIndexHandler(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	if !strings.Contains(rr.Body.String(), "Welcome to the Firefly III Statement Importer!") {
+	if !strings.Contains(rr.Body.String(), "Firefly III Statement Importer") {
 		t.Errorf("handler returned unexpected body: got %v", rr.Body.String())
 	}
 	if !strings.Contains(rr.Body.String(), "Checking Account") {

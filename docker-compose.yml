@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   app:
-    image: golang:1.22-alpine
+    build: .
     container_name: firefly-importer
     working_dir: /app
     ports:
@@ -10,6 +8,5 @@ services:
     env_file:
       - .env
     restart: unless-stopped
-    command: go run cmd/firefly-importer/main.go
     volumes:
       - .:/app
