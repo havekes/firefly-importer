@@ -44,7 +44,7 @@ func ParseCSV(r io.Reader) ([]models.Transaction, error) {
 
 		// Attempt simple YYYY-MM-DD validation
 		if _, err := time.Parse("2006-01-02", dateStr); err != nil {
-			// Skip or handle differently, for now just append what we have
+			continue // Skip rows with invalid date formats
 		}
 
 		description := strings.TrimSpace(record[1])

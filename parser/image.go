@@ -28,8 +28,8 @@ type textContent struct {
 }
 
 type imageContent struct {
-	Type     string         `json:"type"`
-	ImageURL map[string]any `json:"image_url"`
+	Type     string            `json:"type"`
+	ImageURL map[string]string `json:"image_url"`
 }
 
 type visionResponse struct {
@@ -68,7 +68,7 @@ func ParseImage(r io.Reader, visionAPIURL, visionAPIKey, visionModel string) ([]
 					textContent{Type: "text", Text: prompt},
 					imageContent{
 						Type: "image_url",
-						ImageURL: map[string]any{
+						ImageURL: map[string]string{
 							"url": fmt.Sprintf("data:image/jpeg;base64,%s", base64Image),
 						},
 					},
@@ -92,7 +92,7 @@ func ParseImage(r io.Reader, visionAPIURL, visionAPIKey, visionModel string) ([]
 		req.Header.Set("Authorization", "Bearer "+visionAPIKey)
 	}
 
-	client := &http.Client{}
+	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("vision API request failed: %w", err)

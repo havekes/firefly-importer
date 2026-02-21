@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"firefly-importer/models"
@@ -63,7 +64,10 @@ func (c *Client) GetRecentTransactions(daysOffset int) ([]models.Transaction, er
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
+		}
 		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
@@ -77,11 +81,20 @@ func (c *Client) GetRecentTransactions(daysOffset int) ([]models.Transaction, er
 	for _, item := range fireflyResp.Data {
 		for _, tx := range item.Attributes.Transactions {
 			// Convert string amount to float handling
-			var amount float64
-			fmt.Sscanf(tx.Amount, "%f", &amount)
+			amount, amountErr := strconv.ParseFloat(tx.Amount, 64)
+			if amountErr != nil {
+				// Consider logging this error
+				continue // Skip transaction with unparseable amount
+			}
+
+			parsedDate, dateErr := time.Parse(time.RFC3339, tx.Date)
+			if dateErr != nil {
+				// Consider logging this error
+				continue // Skip transaction with unparseable date
+			}
 
 			transactions = append(transactions, models.Transaction{
-				Date:            tx.Date[:10], // Assuming date format like 2023-01-01T00:00:00Z
+				Date:            parsedDate.Format("2006-01-02"),
 				Description:     tx.Description,
 				Amount:          amount,
 				Type:            tx.Type,
@@ -145,7 +158,10 @@ func (c *Client) StoreTransaction(tx models.Transaction) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		respBodyBytes, _ := io.ReadAll(resp.Body)
+		respBodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
+		}
 		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(respBodyBytes))
 	}
 
