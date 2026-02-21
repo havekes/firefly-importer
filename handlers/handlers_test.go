@@ -63,7 +63,8 @@ func TestSaveHandler(t *testing.T) {
 	appHandler := NewAppHandler(client, cfg)
 
 	body := `{"transactions": [{"date": "2023-12-01", "description": "Test", "amount": 10.0, "type": "withdrawal", "source_id": "1", "status": "Added"}]}`
-	req, err := http.NewRequest("POST", "/save", strings.NewReader(body))
+	req, err := http.NewRequest("POST", "/save", strings.NewReader("payload="+body))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +76,7 @@ func TestSaveHandler(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	if !strings.Contains(rr.Body.String(), `"added":1`) {
+	if !strings.Contains(rr.Body.String(), `Saved 1 transaction(s) successfully!`) {
 		t.Errorf("handler returned unexpected body: got %v", rr.Body.String())
 	}
 }

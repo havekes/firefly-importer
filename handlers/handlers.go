@@ -53,6 +53,26 @@ func renderPage(w http.ResponseWriter, data PageData) {
 	}
 }
 
+// SaveResultData holds data for the save_result.html template snippet
+type SaveResultData struct {
+	Added int
+	Error string
+}
+
+// renderSaveResult parses and executes the save_result.html template snippet.
+func renderSaveResult(w http.ResponseWriter, data SaveResultData) {
+	tmpl, err := template.ParseFS(templateFS, "templates/save_result.html")
+	if err != nil {
+		log.Printf("template parse error: %v", err)
+		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.ExecuteTemplate(w, "save-result", data); err != nil {
+		log.Printf("template execute error: %v", err)
+	}
+}
+
 // renderError logs the error and renders the index page with an error banner.
 // It fetches accounts so the upload form remains functional.
 func (h *AppHandler) renderError(w http.ResponseWriter, statusCode int, msg string, err error) {
@@ -196,15 +216,22 @@ type SaveRequest struct {
 
 // SaveHandler handles POST /save
 func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		log.Printf("SaveHandler: failed to parse form: %v", err)
+		renderSaveResult(w, SaveResultData{Error: "Failed to parse form submission"})
+		return
+	}
+
+	payload := r.FormValue("payload")
+	if payload == "" {
+		renderSaveResult(w, SaveResultData{Error: "No payload provided"})
+		return
+	}
+
 	var req SaveRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("SaveHandler: failed to parse request body: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "error",
-			"error":  fmt.Sprintf("Failed to parse request body: %v", err),
-		})
+	if err := json.Unmarshal([]byte(payload), &req); err != nil {
+		log.Printf("SaveHandler: failed to parse payload JSON: %v. payload=%s", err, payload)
+		renderSaveResult(w, SaveResultData{Error: fmt.Sprintf("Failed to parse request payload: %v", err)})
 		return
 	}
 
@@ -226,22 +253,22 @@ func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	if errorCount > 0 && addedCount == 0 {
 		// All transactions failed — report as an error
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "error",
-			"added":  addedCount,
-			"errors": errorCount,
-			"error":  fmt.Sprintf("All %d transaction(s) failed to save. First error: %v", errorCount, firstErr),
+		renderSaveResult(w, SaveResultData{
+			Error: fmt.Sprintf("All %d transaction(s) failed to save. First error: %v", errorCount, firstErr),
 		})
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "success",
-		"added":  addedCount,
-		"errors": errorCount,
-	})
+	if errorCount > 0 {
+		renderSaveResult(w, SaveResultData{
+			Added: addedCount,
+			Error: fmt.Sprintf("Saved %d, but %d failed. First error: %v", addedCount, errorCount, firstErr),
+		})
+		return
+	}
+
+	// Success
+	renderSaveResult(w, SaveResultData{Added: addedCount})
 }

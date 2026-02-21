@@ -4,83 +4,83 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Firefly III Importer</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="min-h-screen bg-gray-50 text-gray-800 font-sans">
+<body class="min-h-screen bg-base-200 text-base-content font-sans">
 
   <!-- Header -->
-  <header class="bg-blue-700 text-white shadow-md">
-    <div class="max-w-6xl mx-auto px-6 py-5 flex items-center gap-3">
+  <header class="navbar bg-blue-600 text-white shadow-md">
+    <div class="max-w-6xl mx-auto px-6 w-full flex items-center gap-3">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
       <div>
         <h1 class="text-xl font-bold leading-tight">Firefly III Statement Importer</h1>
-        <p class="text-blue-200 text-sm">Upload a CSV or screenshot to import transactions</p>
+        <p class="text-sm opacity-80">Upload a CSV or screenshot to import transactions</p>
       </div>
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+  <main class="max-w-6xl mx-auto px-6 py-8 space-y-8" id="main-content">
 
     <!-- Error Banner -->
     {{ if .Error }}
-    <div class="rounded-md bg-red-50 border border-red-200 p-4 flex items-start gap-3">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-      </svg>
-      <p class="text-sm text-red-700">{{ .Error }}</p>
+    <div class="alert alert-error">
+      <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <span>{{ .Error }}</span>
     </div>
     {{ end }}
 
 
 
     <!-- Upload Card -->
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <h2 class="text-lg font-semibold mb-1">Upload Statement</h2>
-      <p class="text-sm text-gray-500 mb-5">Supported formats: CSV, PNG, JPG</p>
+    <section class="card bg-base-100 shadow-sm border border-base-300">
+      <div class="card-body">
+        <h2 class="card-title mb-1">Upload Statement</h2>
+        <p class="text-sm text-base-content/70 mb-5">Supported formats: CSV, PNG, JPG</p>
 
-      <form enctype="multipart/form-data" method="POST" action="/upload" class="space-y-5">
+        <form hx-post="/upload" hx-encoding="multipart/form-data" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" class="flex flex-col sm:flex-row sm:items-end gap-8">
 
-        <!-- Account Dropdown -->
-        <div>
-          <label for="account_id" class="block text-sm font-medium text-gray-700 mb-1">Target Account</label>
-          <select id="account_id" name="account_id"
-            class="block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border">
-            {{ if .Accounts }}
-              {{ range .Accounts }}
-                <option value="{{ .ID }}">{{ .Name }}</option>
+          <!-- Account Dropdown -->
+          <div class="form-control w-full sm:w-auto sm:flex-1 max-w-xs">
+            <label for="account_id" class="label">
+              <span class="label-text font-medium">Target Account</span>
+            </label>
+            <select id="account_id" name="account_id" class="select select-bordered w-full" required>
+              {{ if .Accounts }}
+                {{ range .Accounts }}
+                  <option value="{{ .ID }}">{{ .Name }}</option>
+                {{ end }}
+              {{ else }}
+                <option disabled value="">No accounts available</option>
               {{ end }}
-            {{ else }}
-              <option disabled value="">No accounts available</option>
-            {{ end }}
-          </select>
-        </div>
+            </select>
+          </div>
 
-        <!-- File Input -->
-        <div>
-          <label for="file" class="block text-sm font-medium text-gray-700 mb-1">Statement File</label>
-          <input id="file" name="file" type="file" accept=".csv,.png,.jpg,.jpeg"
-            class="block w-full text-sm text-gray-500
-                   file:mr-4 file:py-2 file:px-4
-                   file:rounded-md file:border-0
-                   file:text-sm file:font-semibold
-                   file:bg-blue-50 file:text-blue-700
-                   hover:file:bg-blue-100 cursor-pointer" />
-        </div>
+          <!-- File Input -->
+          <div class="form-control w-full sm:w-auto sm:flex-1 max-w-xs">
+            <label for="file" class="label">
+              <span class="label-text font-medium">Statement File</span>
+            </label>
+            <input id="file" name="file" type="file" accept=".csv,.png,.jpg,.jpeg" class="file-input file-input-bordered w-full" required />
+          </div>
 
-        <!-- Submit -->
-        <div class="pt-1">
-          <button type="submit"
-            class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            Parse &amp; Preview
-          </button>
-        </div>
+          <!-- Submit -->
+          <div class="w-full sm:w-auto">
+            <button type="submit" class="btn bg-blue-600 hover:bg-blue-700 text-white border-none w-full sm:w-auto">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Parse &amp; Preview
+              <span class="htmx-indicator loading loading-spinner loading-sm ml-2"></span>
+            </button>
+          </div>
 
-      </form>
+        </form>
+      </div>
     </section>
 
     <!-- Datalists for Budgets and Categories -->
@@ -98,218 +98,150 @@
 
     <!-- Results Section -->
     {{ if .Results }}
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <div>
-          <h2 class="text-lg font-semibold">Preview Results</h2>
-          <p class="text-sm text-gray-500">Review before saving to Firefly III</p>
-        </div>
-        <button id="save-btn"
-          onclick="saveTransactions()"
-          class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-          <span id="save-label">Save to Firefly</span>
-          <span id="save-count" class="bg-green-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full"></span>
-        </button>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-4 py-3 text-center w-10">
-                <input type="checkbox" id="select-all" title="Select / deselect all"
-                  class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
-                  onchange="toggleAll(this.checked)" />
-              </th>
-              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Description</th>
-              <th class="px-4 py-3 text-right font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Type</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Budget</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Category</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Status</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            {{ range $i, $tx := .Results }}
-            <tr class="
-              {{ if eq (print $tx.Status) "Added" }}bg-green-50
-              {{ else if eq (print $tx.Status) "Skipped (Duplicate)" }}bg-yellow-50
-              {{ else if eq (print $tx.Status) "Error" }}bg-red-50
-              {{ else }}bg-white
-              {{ end }}
-            ">
-              <td class="px-4 py-3 text-center">
-                {{ if eq (print $tx.Status) "Added" }}
-                  <input type="checkbox"
-                    data-index="{{ $i }}"
-                    class="tx-checkbox h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
-                    checked
-                    onchange="updateCount()" />
-                {{ end }}
-              </td>
-              <td class="px-4 py-3 whitespace-nowrap font-mono text-gray-700">{{ $tx.Date }}</td>
-              <td class="px-4 py-3 text-gray-800">{{ $tx.Description }}</td>
-              <td class="px-4 py-3 text-right font-medium {{ if eq (print $tx.Status) "Added" }}text-green-700{{ else }}text-gray-700{{ end }}">
-                {{ printf "%.2f" $tx.Amount }}
-              </td>
-              <td class="px-4 py-3 capitalize text-gray-600">{{ $tx.Type }}</td>
-              <td class="px-4 py-3">
-                {{ if eq (print $tx.Status) "Added" }}
-                  <input type="text" list="budgets-list" data-budget-index="{{ $i }}" class="tx-budget block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-1 px-2 border" placeholder="Budget...">
-                {{ end }}
-              </td>
-              <td class="px-4 py-3">
-                {{ if eq (print $tx.Status) "Added" }}
-                  <input type="text" list="categories-list" data-category-index="{{ $i }}" class="tx-category block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-1 px-2 border" placeholder="Category...">
-                {{ end }}
-              </td>
-              <td class="px-4 py-3">
-                {{ if eq (print $tx.Status) "Added" }}
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">✓ Added</span>
-                {{ else if eq (print $tx.Status) "Skipped (Duplicate)" }}
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">⟳ Duplicate</span>
-                {{ else if eq (print $tx.Status) "Error" }}
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">✕ Error</span>
-                {{ else }}
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">{{ $tx.Status }}</span>
-                {{ end }}
-              </td>
-            </tr>
-            {{ end }}
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Summary Footer -->
-      <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500" id="results-summary">
-        {{ len .Results }} transaction(s) parsed
-      </div>
-
-      <!-- Save error banner (shown by JS on failure) -->
-      <div id="save-error" class="hidden px-6 py-3 border-t border-red-200 bg-red-50">
-        <div class="flex items-start gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-500 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-          </svg>
-          <p id="save-error-msg" class="text-xs text-red-700"></p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Embedded JSON for JS to POST -->
-    <script>
-      const TRANSACTIONS = {{ .ResultsJSON }};
-
-      // ── Checkbox helpers ──────────────────────────────────────────────────
-
-      function checkedBoxes() {
-        return Array.from(document.querySelectorAll('.tx-checkbox:checked'));
-      }
-
-      function updateCount() {
-        const n       = checkedBoxes().length;
-        const total   = document.querySelectorAll('.tx-checkbox').length;
-        const countEl = document.getElementById('save-count');
-        const btn     = document.getElementById('save-btn');
-        const selectAll = document.getElementById('select-all');
-
-        countEl.textContent = n > 0 ? n : '';
-        btn.disabled = n === 0;
-
-        if (n === 0) {
-          selectAll.checked = false;
-          selectAll.indeterminate = false;
-        } else if (n === total) {
-          selectAll.checked = true;
-          selectAll.indeterminate = false;
-        } else {
-          selectAll.checked = false;
-          selectAll.indeterminate = true;
-        }
-      }
-
-      function toggleAll(checked) {
-        document.querySelectorAll('.tx-checkbox').forEach(cb => cb.checked = checked);
-        updateCount();
-      }
-
-      // Initialise count badge on page load
-      document.addEventListener('DOMContentLoaded', updateCount);
-
-      // ── Save ─────────────────────────────────────────────────────────────
-
-      function showSaveError(msg) {
-        const banner = document.getElementById('save-error');
-        const msgEl  = document.getElementById('save-error-msg');
-        msgEl.textContent = msg;
-        banner.classList.remove('hidden');
-      }
-
-      async function saveTransactions() {
-        const selected = checkedBoxes().map(cb => {
-          const index = parseInt(cb.dataset.index, 10);
-          const tx = TRANSACTIONS[index];
-          // Get values from the inputs
-          const budgetInput = document.querySelector(`.tx-budget[data-budget-index="${index}"]`);
-          const categoryInput = document.querySelector(`.tx-category[data-category-index="${index}"]`);
-
-          tx.budget_name = budgetInput ? budgetInput.value.trim() : "";
-          tx.category_name = categoryInput ? categoryInput.value.trim() : "";
-
-          return tx;
-        });
-
-        if (selected.length === 0) return;
-
-        const btn   = document.getElementById('save-btn');
-        const label = document.getElementById('save-label');
-        document.getElementById('save-error').classList.add('hidden');
-        btn.disabled = true;
-        label.textContent = 'Saving…';
-
-        const restore = () => {
-          label.textContent = 'Save to Firefly';
-          btn.disabled = false;
-          updateCount();
-        };
-
-        try {
-          const resp = await fetch('/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ transactions: selected }),
-          });
-          const data = await resp.json();
-          if (resp.ok) {
-            if (data.errors && data.errors > 0) {
-              showSaveError(
-                `Saved ${data.added} transaction(s), but ${data.errors} failed. Check the server logs for details.`
-              );
-              restore();
+    <section x-data="{
+        transactions: {{ .ResultsJSON }},
+        selectedIndices: [],
+        isSaving: false,
+        get selectedCount() {
+            return this.selectedIndices.length;
+        },
+        get allSelected() {
+            const numAdded = this.transactions.filter(t => t.status === 'Added').length;
+            return numAdded > 0 && this.selectedIndices.length === numAdded;
+        },
+        toggleAll(checked) {
+            if (checked) {
+                this.selectedIndices = this.transactions
+                    .map((t, i) => t.status === 'Added' ? i : -1)
+                    .filter(i => i !== -1);
             } else {
-              window.location.href = '/';
+                this.selectedIndices = [];
             }
-          } else {
-            showSaveError(data.error || 'Save failed. Check the server logs for details.');
-            restore();
-          }
-        } catch (err) {
-          showSaveError('Request failed: ' + err);
-          restore();
+        },
+        preparePayload() {
+            const payload = this.selectedIndices.map(i => {
+                let tx = { ...this.transactions[i] };
+                const budgetInput = document.querySelector(`.tx-budget[data-index='${i}']`);
+                const categoryInput = document.querySelector(`.tx-category[data-index='${i}']`);
+                tx.budget_name = budgetInput ? budgetInput.value.trim() : '';
+                tx.category_name = categoryInput ? categoryInput.value.trim() : '';
+                return tx;
+            });
+            document.getElementById('save-payload').value = JSON.stringify({ transactions: payload });
         }
-      }
-    </script>
+    }" x-init="toggleAll(true)" class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
+      
+      <form hx-post="/save" hx-target="#save-result-container" hx-swap="innerHTML" @submit="preparePayload(); isSaving = true" @htmx:after-request="isSaving = false">
+        
+        <input type="hidden" id="save-payload" name="payload" value='' />
+
+        <div class="px-6 py-4 border-b border-base-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-semibold">Preview Results</h2>
+            <p class="text-sm text-base-content/70">Review before saving to Firefly III</p>
+          </div>
+          <button type="submit" class="btn btn-success" :disabled="selectedCount === 0 || isSaving">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" x-show="!isSaving">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            <span class="loading loading-spinner loading-sm" x-show="isSaving" style="display: none;"></span>
+            <span x-text="isSaving ? 'Saving...' : 'Save to Firefly'"></span>
+            <div class="badge badge-neutral" x-text="selectedCount" x-show="selectedCount > 0 && !isSaving"></div>
+          </button>
+        </div>
+
+        <div id="save-result-container" class="px-6"></div>
+
+        <div class="overflow-x-auto">
+          <table class="table table-zebra w-full text-sm">
+            <thead class="bg-base-200 text-base-content">
+              <tr>
+                <th class="w-12 text-center">
+                  <input type="checkbox" class="checkbox checkbox-sm checkbox-success"
+                    :checked="allSelected"
+                    @change="toggleAll($event.target.checked)" />
+                </th>
+                <th>Date</th>
+                <th>Description</th>
+                <th class="text-right">Amount</th>
+                <th>Type</th>
+                <th>Budget</th>
+                <th>Category</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="(tx, i) in transactions" :key="i">
+                <tr :class="{
+                  'bg-success/10': tx.status === 'Added',
+                  'bg-warning/10': tx.status === 'Skipped (Duplicate)',
+                  'bg-error/10': tx.status === 'Error'
+                }">
+                  <td class="text-center">
+                    <input type="checkbox"
+                      class="checkbox checkbox-sm checkbox-success"
+                      x-show="tx.status === 'Added'"
+                      :value="i"
+                      x-model="selectedIndices" />
+                  </td>
+                  <td class="whitespace-nowrap font-mono text-base-content" x-text="tx.date"></td>
+                  <td class="text-base-content" x-text="tx.description"></td>
+                  <td class="text-right font-medium" :class="tx.status === 'Added' ? 'text-success' : 'text-base-content'" x-text="parseFloat(tx.amount).toFixed(2)"></td>
+                  <td class="capitalize text-base-content/80" x-text="tx.type"></td>
+                  <td>
+                    <input type="text" list="budgets-list" :data-index="i" x-show="tx.status === 'Added'" class="tx-budget input input-bordered input-sm w-full max-w-xs" placeholder="Budget...">
+                  </td>
+                  <td>
+                    <input type="text" list="categories-list" :data-index="i" x-show="tx.status === 'Added'" class="tx-category input input-bordered input-sm w-full max-w-xs" placeholder="Category...">
+                  </td>
+                  <td>
+                    <span class="badge font-medium whitespace-nowrap gap-1"
+                      :class="{
+                        'badge-success': tx.status === 'Added',
+                        'badge-warning': tx.status === 'Skipped (Duplicate)',
+                        'badge-error': tx.status === 'Error',
+                        'badge-neutral': !['Added', 'Skipped (Duplicate)', 'Error'].includes(tx.status)
+                      }"
+                    >
+                        <span x-show="tx.status === 'Added'">✓ Added</span>
+                        <span x-show="tx.status === 'Skipped (Duplicate)'">⟳ Duplicate</span>
+                        <span x-show="tx.status === 'Error'">✕ Error</span>
+                        <span x-show="!['Added', 'Skipped (Duplicate)', 'Error'].includes(tx.status)" x-text="tx.status"></span>
+                    </span>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Summary Footer -->
+        <div class="px-6 py-3 bg-base-200 border-t border-base-300 text-xs text-base-content/70">
+          <span x-text="transactions.length"></span> transaction(s) parsed
+        </div>
+      </form>
+    </section>
     {{ end }}
 
   </main>
 
-  <footer class="text-center text-xs text-gray-400 py-6">
-    Firefly III Importer &mdash; stateless Go + Tailwind
+  <footer class="footer footer-center p-4 bg-base-300 text-base-content">
+    <aside>
+      <p>Firefly III Statement Importer &mdash; @havekes</p>
+    </aside>
   </footer>
+
+  <style>
+    .htmx-indicator {
+      display: none;
+    }
+    .htmx-request .htmx-indicator {
+      display: inline-block;
+    }
+    .htmx-request.htmx-indicator {
+      display: inline-block;
+    }
+  </style>
 
 </body>
 </html>
