@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"firefly-importer/models"
 )
@@ -55,10 +56,12 @@ func ParseImage(r io.Reader, visionAPIURL, visionAPIKey, visionModel string) ([]
 
 	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
 
+	currentYear := time.Now().Format("2006")
+
 	// Construct OpenAI-compatible payload
 	prompt := `Extract bank transactions from this image. Return ONLY a JSON array with objects containing: 
 	"date" (YYYY-MM-DD), "description" (string), "amount" (float, absolute value), and "type" (string: "withdrawal" or "deposit").
-	Do not include markdown blocks like ` + "```json" + ` or any other text.`
+	Do not include markdown blocks like ` + "```json" + ` or any other text. Assume the year is ` + currentYear + ` if not provided in the image.`
 
 	payload := visionRequest{
 		Model: visionModel,
