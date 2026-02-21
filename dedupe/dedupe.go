@@ -38,7 +38,6 @@ func Filter(incoming []models.Transaction, existing []models.Transaction) []mode
 			result[i].Status = models.StatusSkipped
 		} else {
 			result[i].Status = models.StatusAdded
-			existingHashes[hash] = true
 		}
 	}
 
