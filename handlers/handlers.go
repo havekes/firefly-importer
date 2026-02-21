@@ -133,7 +133,7 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch existing transactions for deduplication
-	existingTransactions, err := h.Client.GetRecentTransactions(30)
+	existingTransactions, err := h.Client.GetRecentTransactions(accountIDStr, 30)
 	if err != nil {
 		h.renderError(w, http.StatusInternalServerError, "Failed to fetch recent transactions", err)
 		return

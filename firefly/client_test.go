@@ -13,11 +13,14 @@ func TestGetRecentTransactions(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("Expected GET request, got %s", r.Method)
 		}
-		if r.URL.Path != "/transactions" {
-			t.Errorf("Expected path /transactions, got %s", r.URL.Path)
+		if r.URL.Path != "/accounts/123/transactions" {
+			t.Errorf("Expected path /accounts/123/transactions, got %s", r.URL.Path)
 		}
 		if r.URL.Query().Get("start") == "" {
 			t.Errorf("Expected start query parameter to be set")
+		}
+		if r.URL.Query().Get("end") == "" {
+			t.Errorf("Expected end query parameter to be set")
 		}
 		if r.Header.Get("Authorization") != "Bearer test-token" {
 			t.Errorf("Expected Bearer test-token, got %s", r.Header.Get("Authorization"))
@@ -48,7 +51,7 @@ func TestGetRecentTransactions(t *testing.T) {
 	defer mockServer.Close()
 
 	client := NewClient(mockServer.URL, "test-token")
-	txs, err := client.GetRecentTransactions(30)
+	txs, err := client.GetRecentTransactions("123", 30)
 
 	if err != nil {
 		t.Fatalf("GetRecentTransactions failed: %v", err)

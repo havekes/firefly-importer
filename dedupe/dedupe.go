@@ -9,7 +9,7 @@ import (
 // GenerateHash generates a SHA-256 hash for a transaction based on Date, Description, and Amount
 func GenerateHash(tx models.Transaction) string {
 	// We format the amount predictably to avoid floating point inconsistencies
-	data := fmt.Sprintf("%s|%s|%.2f|%s|%s", tx.Date, tx.Description, tx.Amount, tx.Type, tx.SourceName)
+	data := fmt.Sprintf("%s|%s|%.2f|%s", tx.Date, tx.Description, tx.Amount, tx.Type)
 	hash := sha256.Sum256([]byte(data))
 	return fmt.Sprintf("%x", hash)
 }

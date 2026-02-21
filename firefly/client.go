@@ -47,9 +47,10 @@ type fireflyTransactionResponse struct {
 }
 
 // GetRecentTransactions fetches recent transactions for deduplication purposes
-func (c *Client) GetRecentTransactions(daysOffset int) ([]models.Transaction, error) {
+func (c *Client) GetRecentTransactions(accountID string, daysOffset int) ([]models.Transaction, error) {
+	endDate := time.Now().Format("2006-01-02")
 	startDate := time.Now().AddDate(0, 0, -daysOffset).Format("2006-01-02")
-	req, err := http.NewRequest("GET", c.BaseURL+"/transactions?start="+startDate, nil)
+	req, err := http.NewRequest("GET", c.BaseURL+"/accounts/"+accountID+"/transactions?start="+startDate+"&end="+endDate, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
