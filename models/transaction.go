@@ -17,6 +17,8 @@ type Transaction struct {
 	Amount          float64           `json:"amount"` // Absolute value
 	Type            string            `json:"type"`   // "withdrawal" or "deposit"
 	SourceName      string            `json:"source_name,omitempty"`
+	SourceID        string            `json:"source_id,omitempty"`
 	DestinationName string            `json:"destination_name,omitempty"`
+	DestinationID   string            `json:"destination_id,omitempty"`
 	Status          TransactionStatus `json:"status,omitempty"`
 }
