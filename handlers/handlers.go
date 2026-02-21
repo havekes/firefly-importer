@@ -3,8 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"firefly-importer/config"
@@ -51,6 +53,10 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	accountIDStr := r.FormValue("account_id")
 	if accountIDStr == "" {
 		http.Error(w, "account_id is required", http.StatusBadRequest)
+		return
+	}
+	if _, err := strconv.Atoi(accountIDStr); err != nil {
+		http.Error(w, "account_id must be a valid numeric ID", http.StatusBadRequest)
 		return
 	}
 
@@ -130,7 +136,7 @@ func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 	for _, tx := range req.Transactions {
 		if tx.Status == models.StatusAdded {
 			if err := h.Client.StoreTransaction(tx); err != nil {
-				fmt.Printf("Failed to store transaction: %v\n", err)
+				log.Printf("Failed to store transaction: %v", err)
 				errorCount++
 			} else {
 				addedCount++
