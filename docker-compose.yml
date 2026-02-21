@@ -1,12 +1,30 @@
 services:
   app:
     build: .
-    container_name: firefly-importer
     working_dir: /app
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
+    environment:
+      - DATABASE_URL=postgres://firefly_importer_user:password@postgres:5432/firefly_importer
     env_file:
       - .env
     restart: unless-stopped
+    depends_on:
+      - postgres
     volumes:
       - .:/app
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: firefly_importer_user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: firefly_importer
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:

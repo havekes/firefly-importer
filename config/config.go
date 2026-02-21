@@ -14,6 +14,8 @@ type Config struct {
 	VisionAPIKey string
 	VisionModel  string
 	Port         string
+	DatabaseURL  string
+	CSRFKey      string
 }
 
 func LoadConfig() *Config {
@@ -29,17 +31,8 @@ func LoadConfig() *Config {
 		VisionAPIKey: os.Getenv("VISION_API_KEY"),
 		VisionModel:  os.Getenv("VISION_API_MODEL"),
 		Port:         os.Getenv("PORT"),
-	}
-
-	// Set defaults
-	if config.Port == "" {
-		config.Port = "8080"
-	}
-	if config.FireflyURL == "" {
-		config.FireflyURL = "https://firefly.havek.es/api/v1"
-	}
-	if config.VisionModel == "" {
-		config.VisionModel = "gpt-4-vision-preview"
+		DatabaseURL:  os.Getenv("DATABASE_URL"),
+		CSRFKey:      os.Getenv("CSRF_KEY"),
 	}
 
 	return config

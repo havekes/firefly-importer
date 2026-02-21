@@ -24,9 +24,9 @@ func TestGenerateHash(t *testing.T) {
 		Amount:      50.26, // different amount
 	}
 
-	hash1 := GenerateHash(tx1)
-	hash2 := GenerateHash(tx2)
-	hash3 := GenerateHash(tx3)
+	hash1 := GenerateHash(tx1, tx1.Description)
+	hash2 := GenerateHash(tx2, tx2.Description)
+	hash3 := GenerateHash(tx3, tx3.Description)
 
 	if hash1 != hash2 {
 		t.Errorf("Expected hashes to be identical for identical transactions, got %s and %s", hash1, hash2)

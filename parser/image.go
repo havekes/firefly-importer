@@ -126,8 +126,9 @@ func ParseImage(r io.Reader, visionAPIURL, visionAPIKey, visionModel string) ([]
 		return nil, fmt.Errorf("failed to parse JSON from vision response: %w, raw content: %s", err, contentStr)
 	}
 
-	// Set status for all parsed
+	// Set status for all parsed and capture original description
 	for i := range transactions {
+		transactions[i].OriginalDescription = transactions[i].Description
 		transactions[i].Status = models.StatusPending
 	}
 

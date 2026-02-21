@@ -24,7 +24,8 @@
   </style>
 </head>
 
-<body class="min-h-screen bg-base-200 text-base-content font-sans flex flex-col items-center">
+<body class="min-h-screen bg-base-200 text-base-content font-sans flex flex-col items-center"
+  hx-headers='{"X-CSRF-Token": "{{ .CSRFToken }}"}'>
 
   <!-- Header -->
   <header class="navbar bg-primary text-white shadow-md flex justify-center">
@@ -144,8 +145,12 @@
         preparePayload() {
             const payload = this.selectedIndices.map(i => {
                 let tx = { ...this.transactions[i] };
+                const descInput = document.querySelector(`.tx-desc[data-index='${i}']`);
                 const budgetInput = document.querySelector(`.tx-budget[data-index='${i}']`);
                 const categoryInput = document.querySelector(`.tx-category[data-index='${i}']`);
+                if (descInput) {
+                    tx.description = descInput.value.trim();
+                }
                 tx.budget_name = budgetInput ? budgetInput.value.trim() : '';
                 tx.category_name = categoryInput ? categoryInput.value.trim() : '';
                 return tx;
@@ -181,7 +186,7 @@
 
         <div class="overflow-x-auto">
           <table class="table table-zebra w-full text-sm">
-            <thead class="bg-base-200 text-base-content">
+            <thead class="bg-base-100 text-base-content">
               <tr>
                 <th class="w-12 text-center">
                   <input type="checkbox" class="checkbox checkbox-sm checkbox-success" :checked="allSelected"
@@ -202,20 +207,32 @@
                   'bg-success/10': tx.status === 'Added',
                   'bg-warning/10': tx.status === 'Skipped (Duplicate)',
                   'bg-error/10': tx.status === 'Error'
-                }">
+                }">Date Description Amount Type Budget
                   <td class="text-center">
                     <input type="checkbox" class="checkbox checkbox-sm checkbox-success" x-show="tx.status === 'Added'"
                       :value="i" x-model="selectedIndices" />
                   </td>
                   <td class="whitespace-nowrap font-mono text-base-content" x-text="tx.date"></td>
-                  <td class="text-base-content" x-text="tx.description"></td>
+                  <td>
+                    <span class="text-base-content" x-show="tx.status !== 'Added'" x-text="tx.description"></span>
+                    <div x-show="tx.status === 'Added'" class="flex flex-col gap-1 w-full min-w-[150px]">
+                      <input type="text" :data-index="i" :id="'desc-' + i" :value="tx.description"
+                        class="tx-desc input input-bordered input-sm w-full" placeholder="Description...">
+                      <template x-if="tx.suggested_description">
+                        <button type="button" class="text-xs text-info text-left hover:underline w-fit"
+                          @click="document.getElementById('desc-' + i).value = tx.suggested_description; $el.style.display = 'none'"
+                          x-text="'Suggestion: ' + tx.suggested_description"></button>
+                      </template>
+                    </div>
+                  </td>
                   <td class="text-right font-medium"
                     :class="tx.status === 'Added' ? 'text-success' : 'text-base-content'"
                     x-text="parseFloat(tx.amount).toFixed(2)"></td>
                   <td class="capitalize text-base-content/80" x-text="tx.type"></td>
                   <td>
                     <input type="text" list="budgets-list" :data-index="i" x-show="tx.status === 'Added'"
-                      class="tx-budget input input-bordered input-sm w-full max-w-xs" placeholder="Budget...">
+                      class="tx-budget input input-bordered input-sm w-full max-w-xs" placeholder="Budget..."
+                      :disabled="tx.type === 'deposit'">
                   </td>
                   <td>
                     <input type="text" list="categories-list" :data-index="i" x-show="tx.status === 'Added'"
