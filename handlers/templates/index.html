@@ -148,14 +148,32 @@
       <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500" id="results-summary">
         {{ len .Results }} transaction(s) parsed
       </div>
+
+      <!-- Save error banner (shown by JS on failure) -->
+      <div id="save-error" class="hidden px-6 py-3 border-t border-red-200 bg-red-50">
+        <div class="flex items-start gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-500 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+          </svg>
+          <p id="save-error-msg" class="text-xs text-red-700"></p>
+        </div>
+      </div>
     </section>
 
     <!-- Embedded JSON for JS to POST -->
     <script>
       const TRANSACTIONS = {{ .ResultsJSON }};
 
+      function showSaveError(msg) {
+        const banner = document.getElementById('save-error');
+        const msgEl  = document.getElementById('save-error-msg');
+        msgEl.textContent = msg;
+        banner.classList.remove('hidden');
+      }
+
       async function saveTransactions() {
         const btn = document.getElementById('save-btn');
+        document.getElementById('save-error').classList.add('hidden');
         btn.disabled = true;
         btn.textContent = 'Saving…';
 
@@ -167,14 +185,23 @@
           });
           const data = await resp.json();
           if (resp.ok) {
-            window.location.href = '/';
+            if (data.errors && data.errors > 0) {
+              // Partial success
+              showSaveError(
+                `Saved ${data.added} transaction(s), but ${data.errors} failed. Check the server logs for details.`
+              );
+              btn.disabled = false;
+              btn.textContent = 'Save to Firefly';
+            } else {
+              window.location.href = '/';
+            }
           } else {
-            alert('Save failed: ' + JSON.stringify(data));
+            showSaveError(data.error || 'Save failed. Check the server logs for details.');
             btn.disabled = false;
             btn.textContent = 'Save to Firefly';
           }
         } catch (err) {
-          alert('Request failed: ' + err);
+          showSaveError('Request failed: ' + err);
           btn.disabled = false;
           btn.textContent = 'Save to Firefly';
         }
