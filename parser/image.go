@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"firefly-importer/models"
 )
@@ -82,7 +83,8 @@ func ParseImage(r io.Reader, visionAPIURL, visionAPIKey, visionModel string) ([]
 		return nil, fmt.Errorf("failed to encode vision payload: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", visionAPIURL, bytes.NewBuffer(payloadBytes))
+	endpoint := strings.TrimRight(visionAPIURL, "/") + "/v1/chat/completions"
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create vision request: %w", err)
 	}

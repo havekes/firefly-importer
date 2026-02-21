@@ -93,11 +93,12 @@
         </div>
         <button id="save-btn"
           onclick="saveTransactions()"
-          class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm">
+          class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
           </svg>
-          Save to Firefly
+          <span id="save-label">Save to Firefly</span>
+          <span id="save-count" class="bg-green-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full"></span>
         </button>
       </div>
 
@@ -105,6 +106,11 @@
         <table class="min-w-full divide-y divide-gray-200 text-sm">
           <thead class="bg-gray-50">
             <tr>
+              <th class="px-4 py-3 text-center w-10">
+                <input type="checkbox" id="select-all" title="Select / deselect all"
+                  class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                  onchange="toggleAll(this.checked)" />
+              </th>
               <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Date</th>
               <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Description</th>
               <th class="px-4 py-3 text-right font-medium text-gray-500 uppercase tracking-wider">Amount</th>
@@ -113,29 +119,38 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            {{ range .Results }}
+            {{ range $i, $tx := .Results }}
             <tr class="
-              {{ if eq (print .Status) "Added" }}bg-green-50
-              {{ else if eq (print .Status) "Skipped (Duplicate)" }}bg-yellow-50
-              {{ else if eq (print .Status) "Error" }}bg-red-50
+              {{ if eq (print $tx.Status) "Added" }}bg-green-50
+              {{ else if eq (print $tx.Status) "Skipped (Duplicate)" }}bg-yellow-50
+              {{ else if eq (print $tx.Status) "Error" }}bg-red-50
               {{ else }}bg-white
               {{ end }}
             ">
-              <td class="px-4 py-3 whitespace-nowrap font-mono text-gray-700">{{ .Date }}</td>
-              <td class="px-4 py-3 text-gray-800">{{ .Description }}</td>
-              <td class="px-4 py-3 text-right font-medium {{ if eq (print .Status) "Added" }}text-green-700{{ else }}text-gray-700{{ end }}">
-                {{ printf "%.2f" .Amount }}
+              <td class="px-4 py-3 text-center">
+                {{ if eq (print $tx.Status) "Added" }}
+                  <input type="checkbox"
+                    data-index="{{ $i }}"
+                    class="tx-checkbox h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                    checked
+                    onchange="updateCount()" />
+                {{ end }}
               </td>
-              <td class="px-4 py-3 capitalize text-gray-600">{{ .Type }}</td>
+              <td class="px-4 py-3 whitespace-nowrap font-mono text-gray-700">{{ $tx.Date }}</td>
+              <td class="px-4 py-3 text-gray-800">{{ $tx.Description }}</td>
+              <td class="px-4 py-3 text-right font-medium {{ if eq (print $tx.Status) "Added" }}text-green-700{{ else }}text-gray-700{{ end }}">
+                {{ printf "%.2f" $tx.Amount }}
+              </td>
+              <td class="px-4 py-3 capitalize text-gray-600">{{ $tx.Type }}</td>
               <td class="px-4 py-3">
-                {{ if eq (print .Status) "Added" }}
+                {{ if eq (print $tx.Status) "Added" }}
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">✓ Added</span>
-                {{ else if eq (print .Status) "Skipped (Duplicate)" }}
+                {{ else if eq (print $tx.Status) "Skipped (Duplicate)" }}
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">⟳ Duplicate</span>
-                {{ else if eq (print .Status) "Error" }}
+                {{ else if eq (print $tx.Status) "Error" }}
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">✕ Error</span>
                 {{ else }}
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">{{ .Status }}</span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">{{ $tx.Status }}</span>
                 {{ end }}
               </td>
             </tr>
@@ -164,6 +179,44 @@
     <script>
       const TRANSACTIONS = {{ .ResultsJSON }};
 
+      // ── Checkbox helpers ──────────────────────────────────────────────────
+
+      function checkedBoxes() {
+        return Array.from(document.querySelectorAll('.tx-checkbox:checked'));
+      }
+
+      function updateCount() {
+        const n       = checkedBoxes().length;
+        const total   = document.querySelectorAll('.tx-checkbox').length;
+        const countEl = document.getElementById('save-count');
+        const btn     = document.getElementById('save-btn');
+        const selectAll = document.getElementById('select-all');
+
+        countEl.textContent = n > 0 ? n : '';
+        btn.disabled = n === 0;
+
+        if (n === 0) {
+          selectAll.checked = false;
+          selectAll.indeterminate = false;
+        } else if (n === total) {
+          selectAll.checked = true;
+          selectAll.indeterminate = false;
+        } else {
+          selectAll.checked = false;
+          selectAll.indeterminate = true;
+        }
+      }
+
+      function toggleAll(checked) {
+        document.querySelectorAll('.tx-checkbox').forEach(cb => cb.checked = checked);
+        updateCount();
+      }
+
+      // Initialise count badge on page load
+      document.addEventListener('DOMContentLoaded', updateCount);
+
+      // ── Save ─────────────────────────────────────────────────────────────
+
       function showSaveError(msg) {
         const banner = document.getElementById('save-error');
         const msgEl  = document.getElementById('save-error-msg');
@@ -172,38 +225,44 @@
       }
 
       async function saveTransactions() {
-        const btn = document.getElementById('save-btn');
+        const selected = checkedBoxes().map(cb => TRANSACTIONS[parseInt(cb.dataset.index, 10)]);
+        if (selected.length === 0) return;
+
+        const btn   = document.getElementById('save-btn');
+        const label = document.getElementById('save-label');
         document.getElementById('save-error').classList.add('hidden');
         btn.disabled = true;
-        btn.textContent = 'Saving…';
+        label.textContent = 'Saving…';
+
+        const restore = () => {
+          label.textContent = 'Save to Firefly';
+          btn.disabled = false;
+          updateCount();
+        };
 
         try {
           const resp = await fetch('/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ transactions: TRANSACTIONS }),
+            body: JSON.stringify({ transactions: selected }),
           });
           const data = await resp.json();
           if (resp.ok) {
             if (data.errors && data.errors > 0) {
-              // Partial success
               showSaveError(
                 `Saved ${data.added} transaction(s), but ${data.errors} failed. Check the server logs for details.`
               );
-              btn.disabled = false;
-              btn.textContent = 'Save to Firefly';
+              restore();
             } else {
               window.location.href = '/';
             }
           } else {
             showSaveError(data.error || 'Save failed. Check the server logs for details.');
-            btn.disabled = false;
-            btn.textContent = 'Save to Firefly';
+            restore();
           }
         } catch (err) {
           showSaveError('Request failed: ' + err);
-          btn.disabled = false;
-          btn.textContent = 'Save to Firefly';
+          restore();
         }
       }
     </script>
