@@ -87,3 +87,23 @@ Use Go's `html/template` package to inject data into the single-page UI. We will
 * **Results Section:** * Use Go template tags (`{{ if .Results }}`) to conditionally display a table.
   * Iterate over results (`{{ range .Results }}`).
   * Apply Tailwind classes for row styling based on status: `bg-green-50` for Added, `bg-yellow-50` for Skipped (Duplicate), `bg-red-50` for Error.
+
+---
+
+## Phase 6: Bulk Selection of Budgets and Categories (Enrichment)
+
+To provide more control over the data being imported, users should be able to assign a budget and a category to each transaction before saving.
+
+### 1. Fetching Budgets and Categories
+* Add a `GetBudgets()` method to the `firefly` package that calls `GET /api/v1/budgets` (per the [Budgets API Docs](https://api-docs.firefly-iii.org/#/budgets/listBudget)).
+* Add a `GetCategories()` method to the `firefly` package that calls `GET /api/v1/categories` (per the [Categories API Docs](https://api-docs.firefly-iii.org/#/categories/listCategory)).
+* Pass the retrieved budgets and categories to the frontend template when rendering the parsed transactions.
+
+### 2. Frontend Autocomplete Inputs
+* In the results/review table, add column(s) for Budget and Category on each proposed transaction.
+* Implement an **autocomplete field** for the budget and category inputs using the fetched lists.
+* This allows the user to bulk select or quickly apply an existing budget/category by typing, ensuring valid selection before the final submission.
+
+### 3. Storing Enriched Transactions
+* When the user submits the selected transactions to be saved, capture the assigned budget and category IDs/names from the form payload.
+* Update the `StoreTransaction` method (which uses `POST /api/v1/transactions` - [Store Transaction API Docs](https://api-docs.firefly-iii.org/#/transactions/storeTransaction)) to include `budget_id` (or `budget_name`) and `category_id` (or `category_name`) in the request body for each transaction.

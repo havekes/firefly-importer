@@ -17,9 +17,10 @@ import (
 	"firefly-importer/parser"
 )
 
-// PageData is the data passed to index.html
 type PageData struct {
 	Accounts    []models.Account
+	Budgets     []models.Budget
+	Categories  []models.Category
 	Results     []models.Transaction
 	ResultsJSON template.JS // safe JSON for inline <script>
 	Error       string
@@ -168,8 +169,21 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to re-fetch accounts: %v", err)
 	}
 
+	// Fetch budgets and categories for datalists
+	budgets, err := h.Client.GetBudgets()
+	if err != nil {
+		log.Printf("Failed to re-fetch budgets: %v", err)
+	}
+
+	categories, err := h.Client.GetCategories()
+	if err != nil {
+		log.Printf("Failed to re-fetch categories: %v", err)
+	}
+
 	renderPage(w, PageData{
 		Accounts:    accounts,
+		Budgets:     budgets,
+		Categories:  categories,
 		Results:     results,
 		ResultsJSON: template.JS(jsonBytes),
 	})

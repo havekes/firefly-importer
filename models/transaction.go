@@ -20,5 +20,7 @@ type Transaction struct {
 	SourceID        string            `json:"source_id,omitempty"`
 	DestinationName string            `json:"destination_name,omitempty"`
 	DestinationID   string            `json:"destination_id,omitempty"`
+	BudgetName      string            `json:"budget_name,omitempty"`
+	CategoryName    string            `json:"category_name,omitempty"`
 	Status          TransactionStatus `json:"status,omitempty"`
 }

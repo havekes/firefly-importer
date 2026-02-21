@@ -150,6 +150,86 @@ func (c *Client) GetAccounts() ([]models.Account, error) {
 	return accounts, nil
 }
 
+// GetBudgets fetches budgets from Firefly III
+func (c *Client) GetBudgets() ([]models.Budget, error) {
+	req, err := http.NewRequest("GET", c.BaseURL+"/budgets", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.Token)
+	req.Header.Set("Accept", "application/vnd.api+json")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
+		}
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var fireflyResp models.BudgetResponse
+	if err := json.NewDecoder(resp.Body).Decode(&fireflyResp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	var budgets []models.Budget
+	for _, item := range fireflyResp.Data {
+		budgets = append(budgets, models.Budget{
+			ID:   item.ID,
+			Name: item.Attributes.Name,
+		})
+	}
+
+	return budgets, nil
+}
+
+// GetCategories fetches categories from Firefly III
+func (c *Client) GetCategories() ([]models.Category, error) {
+	req, err := http.NewRequest("GET", c.BaseURL+"/categories", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.Token)
+	req.Header.Set("Accept", "application/vnd.api+json")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
+		}
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var fireflyResp models.CategoryResponse
+	if err := json.NewDecoder(resp.Body).Decode(&fireflyResp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	var categories []models.Category
+	for _, item := range fireflyResp.Data {
+		categories = append(categories, models.Category{
+			ID:   item.ID,
+			Name: item.Attributes.Name,
+		})
+	}
+
+	return categories, nil
+}
+
 // fireflyStoreTransactionRequest represents the payload to create a new transaction
 type fireflyStoreTransactionRequest struct {
 	Transactions []storeTx `json:"transactions"`
@@ -164,6 +244,8 @@ type storeTx struct {
 	SourceID        string `json:"source_id,omitempty"`
 	DestinationName string `json:"destination_name,omitempty"`
 	DestinationID   string `json:"destination_id,omitempty"`
+	BudgetName      string `json:"budget_name,omitempty"`
+	CategoryName    string `json:"category_name,omitempty"`
 }
 
 // StoreTransaction posts a single transaction to Firefly III
@@ -179,6 +261,8 @@ func (c *Client) StoreTransaction(tx models.Transaction) error {
 				SourceID:        tx.SourceID,
 				DestinationName: tx.DestinationName,
 				DestinationID:   tx.DestinationID,
+				BudgetName:      tx.BudgetName,
+				CategoryName:    tx.CategoryName,
 			},
 		},
 	}
