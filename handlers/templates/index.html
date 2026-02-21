@@ -10,7 +10,7 @@
 
   <!-- Header -->
   <header class="bg-blue-700 text-white shadow-md">
-    <div class="max-w-3xl mx-auto px-6 py-5 flex items-center gap-3">
+    <div class="max-w-6xl mx-auto px-6 py-5 flex items-center gap-3">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
@@ -21,7 +21,7 @@
     </div>
   </header>
 
-  <main class="max-w-3xl mx-auto px-6 py-8 space-y-8">
+  <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
 
     <!-- Error Banner -->
     {{ if .Error }}
@@ -83,6 +83,19 @@
       </form>
     </section>
 
+    <!-- Datalists for Budgets and Categories -->
+    <datalist id="budgets-list">
+      {{ range .Budgets }}
+        <option value="{{ .Name }}"></option>
+      {{ end }}
+    </datalist>
+
+    <datalist id="categories-list">
+      {{ range .Categories }}
+        <option value="{{ .Name }}"></option>
+      {{ end }}
+    </datalist>
+
     <!-- Results Section -->
     {{ if .Results }}
     <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -115,6 +128,8 @@
               <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Description</th>
               <th class="px-4 py-3 text-right font-medium text-gray-500 uppercase tracking-wider">Amount</th>
               <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Type</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Budget</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Category</th>
               <th class="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Status</th>
             </tr>
           </thead>
@@ -142,6 +157,16 @@
                 {{ printf "%.2f" $tx.Amount }}
               </td>
               <td class="px-4 py-3 capitalize text-gray-600">{{ $tx.Type }}</td>
+              <td class="px-4 py-3">
+                {{ if eq (print $tx.Status) "Added" }}
+                  <input type="text" list="budgets-list" data-budget-index="{{ $i }}" class="tx-budget block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-1 px-2 border" placeholder="Budget...">
+                {{ end }}
+              </td>
+              <td class="px-4 py-3">
+                {{ if eq (print $tx.Status) "Added" }}
+                  <input type="text" list="categories-list" data-category-index="{{ $i }}" class="tx-category block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-1 px-2 border" placeholder="Category...">
+                {{ end }}
+              </td>
               <td class="px-4 py-3">
                 {{ if eq (print $tx.Status) "Added" }}
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">✓ Added</span>
@@ -225,7 +250,19 @@
       }
 
       async function saveTransactions() {
-        const selected = checkedBoxes().map(cb => TRANSACTIONS[parseInt(cb.dataset.index, 10)]);
+        const selected = checkedBoxes().map(cb => {
+          const index = parseInt(cb.dataset.index, 10);
+          const tx = TRANSACTIONS[index];
+          // Get values from the inputs
+          const budgetInput = document.querySelector(`.tx-budget[data-budget-index="${index}"]`);
+          const categoryInput = document.querySelector(`.tx-category[data-category-index="${index}"]`);
+
+          tx.budget_name = budgetInput ? budgetInput.value.trim() : "";
+          tx.category_name = categoryInput ? categoryInput.value.trim() : "";
+
+          return tx;
+        });
+
         if (selected.length === 0) return;
 
         const btn   = document.getElementById('save-btn');
