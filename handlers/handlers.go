@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -16,6 +17,14 @@ import (
 	"firefly-importer/parser"
 )
 
+// PageData is the data passed to index.html
+type PageData struct {
+	Accounts    []models.Account
+	Results     []models.Transaction
+	ResultsJSON template.JS // safe JSON for inline <script>
+	Error       string
+}
+
 type AppHandler struct {
 	Client *firefly.Client
 	Config *config.Config
@@ -28,6 +37,20 @@ func NewAppHandler(client *firefly.Client, cfg *config.Config) *AppHandler {
 	}
 }
 
+// renderPage parses and executes the index.html template with the given data.
+func renderPage(w http.ResponseWriter, data PageData) {
+	tmpl, err := template.ParseFS(templateFS, "templates/index.html")
+	if err != nil {
+		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.Execute(w, data); err != nil {
+		// Headers already sent; log only.
+		log.Printf("template execute error: %v", err)
+	}
+}
+
 // IndexHandler handles GET /
 func (h *AppHandler) IndexHandler(w http.ResponseWriter, r *http.Request) {
 	accounts, err := h.Client.GetAccounts()
@@ -36,11 +59,7 @@ func (h *AppHandler) IndexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message":  "Welcome to the Firefly III Statement Importer!",
-		"accounts": accounts,
-	})
+	renderPage(w, PageData{Accounts: accounts})
 }
 
 // UploadHandler handles POST /upload
@@ -97,7 +116,7 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Run deduplication filter
 	results := dedupe.Filter(parsedTransactions, existingTransactions)
 
-	// Prepare results (set Source/Destination ID without saving)
+	// Assign source/destination account ID based on transaction type
 	for i, tx := range results {
 		if tx.Status == models.StatusAdded {
 			if strings.ToLower(tx.Type) == "withdrawal" {
@@ -109,11 +128,24 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Return parsed results as JSON
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":  "success",
-		"results": results,
+	// Encode results as JSON for the inline <script> block
+	jsonBytes, err := json.Marshal(results)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to encode results: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch accounts again for the form dropdown
+	accounts, err := h.Client.GetAccounts()
+	if err != nil {
+		// non-fatal; the upload result is more important
+		log.Printf("Failed to re-fetch accounts: %v", err)
+	}
+
+	renderPage(w, PageData{
+		Accounts:    accounts,
+		Results:     results,
+		ResultsJSON: template.JS(jsonBytes),
 	})
 }
 
