@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -11,6 +12,7 @@ import (
 	"strings"
 
 	"firefly-importer/config"
+	"firefly-importer/db"
 	"firefly-importer/dedupe"
 	"firefly-importer/firefly"
 	"firefly-importer/models"
@@ -26,24 +28,28 @@ type PageData struct {
 	Results     []models.Transaction
 	ResultsJSON string // safe JSON for data attribute
 	CSRFField   template.HTML
+	CSRFToken   string
 	Error       string
 }
 
 type AppHandler struct {
 	Client *firefly.Client
 	Config *config.Config
+	DB     *sql.DB
 }
 
-func NewAppHandler(client *firefly.Client, cfg *config.Config) *AppHandler {
+func NewAppHandler(client *firefly.Client, cfg *config.Config, dbConn *sql.DB) *AppHandler {
 	return &AppHandler{
 		Client: client,
 		Config: cfg,
+		DB:     dbConn,
 	}
 }
 
 // renderPage executes the pre-parsed index.html template with the given data.
 func renderPage(w http.ResponseWriter, r *http.Request, data PageData) {
 	data.CSRFField = csrf.TemplateField(r)
+	data.CSRFToken = csrf.Token(r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := Templates.ExecuteTemplate(w, "index.html", data); err != nil {
 		// Headers already sent; log only.
@@ -126,6 +132,7 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	ext := strings.ToLower(filepath.Ext(header.Filename))
+	fileDate := r.FormValue("file_date")
 
 	var parsedTransactions []models.Transaction
 	var parseErr error
@@ -134,7 +141,7 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	case ".csv":
 		parsedTransactions, parseErr = parser.ParseCSV(file)
 	case ".png", ".jpg", ".jpeg":
-		parsedTransactions, parseErr = parser.ParseImage(file, h.Config.VisionAPIURL, h.Config.VisionAPIKey, h.Config.VisionModel)
+		parsedTransactions, parseErr = parser.ParseImage(file, fileDate, h.Config.VisionAPIURL, h.Config.VisionAPIKey, h.Config.VisionModel)
 	default:
 		h.renderError(w, r, http.StatusBadRequest, fmt.Sprintf("Unsupported file type: %q", ext), nil)
 		return
@@ -143,6 +150,20 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	if parseErr != nil {
 		h.renderError(w, r, http.StatusInternalServerError, "Failed to parse file", parseErr)
 		return
+	}
+
+	// Fetch transaction name mappings and apply them
+	mappings, err := db.GetMappings(h.DB)
+	if err != nil {
+		log.Printf("Failed to fetch name mappings (ignoring): %v", err)
+	} else if len(mappings) > 0 {
+		for i, tx := range parsedTransactions {
+			if m, ok := mappings[tx.OriginalDescription]; ok {
+				parsedTransactions[i].SuggestedDescription = m.NewName
+				parsedTransactions[i].SuggestedBudget = m.BudgetName
+				parsedTransactions[i].SuggestedCategory = m.CategoryName
+			}
+		}
 	}
 
 	// Fetch existing transactions for deduplication
@@ -241,6 +262,12 @@ func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 				errorCount++
 			} else {
 				addedCount++
+				// If the description was edited mapping to a new name or budget/category were added, save the mapping
+				if tx.OriginalDescription != "" && (tx.OriginalDescription != tx.Description || tx.BudgetName != "" || tx.CategoryName != "") {
+					if err := db.SaveMapping(h.DB, tx.OriginalDescription, tx.Description, tx.BudgetName, tx.CategoryName); err != nil {
+						log.Printf("Failed to save mapping for %q -> %q, Budget: %q, Category: %q: %v", tx.OriginalDescription, tx.Description, tx.BudgetName, tx.CategoryName, err)
+					}
+				}
 			}
 		}
 	}

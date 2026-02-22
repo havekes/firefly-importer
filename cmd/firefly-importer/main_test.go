@@ -49,7 +49,7 @@ func TestRouting(t *testing.T) {
 		FireflyURL: "http://example.com/api/v1",
 	}
 
-	mux := setupRouter(cfg)
+	mux := setupRouter(cfg, nil)
 
 	// Test GET / route
 	// IndexHandler calls the Firefly API which is unreachable → expect 500

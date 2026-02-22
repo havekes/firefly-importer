@@ -29,7 +29,7 @@ func TestIndexHandler(t *testing.T) {
 
 	client := firefly.NewClient(mockServer.URL, "test-token")
 	cfg := &config.Config{}
-	appHandler := NewAppHandler(client, cfg)
+	appHandler := NewAppHandler(client, cfg, nil)
 
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
@@ -60,7 +60,7 @@ func TestSaveHandler(t *testing.T) {
 
 	client := firefly.NewClient(mockServer.URL, "test-token")
 	cfg := &config.Config{}
-	appHandler := NewAppHandler(client, cfg)
+	appHandler := NewAppHandler(client, cfg, nil)
 
 	body := `{"transactions": [{"date": "2023-12-01", "description": "Test", "amount": 10.0, "type": "withdrawal", "source_id": "1", "status": "Added"}]}`
 	req, err := http.NewRequest("POST", "/save", strings.NewReader("payload="+body))
