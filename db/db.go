@@ -62,7 +62,7 @@ func SaveMapping(db *sql.DB, original, newDesc, budget, category string) error {
 	query := `
 	INSERT INTO name_mappings (original_name, new_name, budget_name, category_name, updated_at)
 	VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-	ON CONFLICT (original_name) 
+	ON CONFLICT (original_name)
 	DO UPDATE SET new_name = EXCLUDED.new_name, budget_name = EXCLUDED.budget_name, category_name = EXCLUDED.category_name, updated_at = EXCLUDED.updated_at;
 	`
 	if logQueries {
