@@ -2,11 +2,19 @@ package db
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"log"
 
 	_ "github.com/lib/pq"
 )
+
+var logQueries bool
+
+// EnableQueryLogging toggles logging of database queries.
+func EnableQueryLogging(enable bool) {
+	logQueries = enable
+}
 
 // InitDB connects to the PostgreSQL database and creates the necessary tables.
 func InitDB(connStr string) (*sql.DB, error) {
@@ -27,30 +35,40 @@ func InitDB(connStr string) (*sql.DB, error) {
 	return db, nil
 }
 
+// Mapping represents a saved mapping for description, budget, and category.
+type Mapping struct {
+	OriginalName string
+	NewName      string
+	BudgetName   string
+	CategoryName string
+}
+
+//go:embed schema.sql
+var schemaSQL string
+
 func createSchema(db *sql.DB) error {
-	query := `
-	CREATE TABLE IF NOT EXISTS name_mappings (
-		original_name TEXT PRIMARY KEY,
-		new_name TEXT NOT NULL,
-		updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-	);
-	`
-	_, err := db.Exec(query)
+	if logQueries {
+		log.Printf("[DB DEBUG] Executing schema SQL")
+	}
+	_, err := db.Exec(schemaSQL)
 	return err
 }
 
-// SaveMapping inserts or updates a name mapping from original to new name.
-func SaveMapping(db *sql.DB, original, new string) error {
+// SaveMapping inserts or updates a name mapping from original to new name, budget, and category.
+func SaveMapping(db *sql.DB, original, newDesc, budget, category string) error {
 	if db == nil {
 		return nil
 	}
 	query := `
-	INSERT INTO name_mappings (original_name, new_name, updated_at)
-	VALUES ($1, $2, CURRENT_TIMESTAMP)
+	INSERT INTO name_mappings (original_name, new_name, budget_name, category_name, updated_at)
+	VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
 	ON CONFLICT (original_name) 
-	DO UPDATE SET new_name = EXCLUDED.new_name, updated_at = EXCLUDED.updated_at;
+	DO UPDATE SET new_name = EXCLUDED.new_name, budget_name = EXCLUDED.budget_name, category_name = EXCLUDED.category_name, updated_at = EXCLUDED.updated_at;
 	`
-	_, err := db.Exec(query, original, new)
+	if logQueries {
+		log.Printf("[DB DEBUG] Executing: %s args: [%s, %s, %s, %s]", query, original, newDesc, budget, category)
+	}
+	_, err := db.Exec(query, original, newDesc, budget, category)
 	if err != nil {
 		return fmt.Errorf("failed to upsert name mapping: %w", err)
 	}
@@ -58,13 +76,16 @@ func SaveMapping(db *sql.DB, original, new string) error {
 }
 
 // GetMappings retrieves all name mappings from the database.
-func GetMappings(db *sql.DB) (map[string]string, error) {
+func GetMappings(db *sql.DB) (map[string]Mapping, error) {
 	if db == nil {
 		return nil, nil
 	}
-	mappings := make(map[string]string)
+	mappings := make(map[string]Mapping)
 
-	query := `SELECT original_name, new_name FROM name_mappings;`
+	query := `SELECT original_name, new_name, COALESCE(budget_name, ''), COALESCE(category_name, '') FROM name_mappings;`
+	if logQueries {
+		log.Printf("[DB DEBUG] Executing: %s", query)
+	}
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query name mappings: %w", err)
@@ -72,11 +93,11 @@ func GetMappings(db *sql.DB) (map[string]string, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var original, new string
-		if err := rows.Scan(&original, &new); err != nil {
+		var m Mapping
+		if err := rows.Scan(&m.OriginalName, &m.NewName, &m.BudgetName, &m.CategoryName); err != nil {
 			return nil, fmt.Errorf("failed to scan name mapping row: %w", err)
 		}
-		mappings[original] = new
+		mappings[m.OriginalName] = m
 	}
 
 	if err := rows.Err(); err != nil {

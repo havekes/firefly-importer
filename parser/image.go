@@ -43,7 +43,7 @@ type visionResponse struct {
 }
 
 // ParseImage sends an image to a Vision API and extracts transaction data.
-func ParseImage(r io.Reader, visionAPIURL, visionAPIKey, visionModel string) ([]models.Transaction, error) {
+func ParseImage(r io.Reader, fileDate, visionAPIURL, visionAPIKey, visionModel string) ([]models.Transaction, error) {
 	if visionAPIURL == "" {
 		return nil, errors.New("vision API URL is required")
 	}
@@ -56,13 +56,24 @@ func ParseImage(r io.Reader, visionAPIURL, visionAPIKey, visionModel string) ([]
 
 	base64Image := base64.StdEncoding.EncodeToString(imageBytes)
 
-	currentYear := time.Now().Format("2006")
+	currentDate := fileDate
+	if currentDate == "" {
+		currentDate = time.Now().Format("2006-01-02")
+	}
+	currentYear := ""
+	if len(currentDate) >= 4 {
+		currentYear = currentDate[:4]
+	} else {
+		currentYear = time.Now().Format("2006")
+	}
 
 	// Construct OpenAI-compatible payload
-	prompt := `Extract bank transactions from this image. Return ONLY a JSON array with objects containing: 
+	prompt := `Extract bank transactions from this image. Return ONLY a JSON array with objects containing:
 	"date" (YYYY-MM-DD), "description" (string), "amount" (float, absolute value), and "type" (string: "withdrawal" or "deposit").
 	Description should only contain transaction title, not the full transaction details.
-	Do not include markdown blocks like ` + "```json" + ` or any other text. Assume the year is ` + currentYear + ` if not provided in the image.`
+	Assume the year is ` + currentYear + ` if not provided in the image.
+	Today's date is ` + currentDate + `, use this to resolve relative dates like "today" or "yesterday".
+	Do not include markdown blocks like ` + "```json" + ` or any other text.`
 
 	payload := visionRequest{
 		Model: visionModel,

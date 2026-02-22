@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -16,6 +17,7 @@ type Config struct {
 	Port         string
 	DatabaseURL  string
 	CSRFKey      string
+	Debug        bool
 }
 
 func LoadConfig() *Config {
@@ -23,6 +25,8 @@ func LoadConfig() *Config {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, reading configuration from environment variables")
 	}
+
+	debugBool, _ := strconv.ParseBool(os.Getenv("DEBUG"))
 
 	config := &Config{
 		FireflyURL:   os.Getenv("FIREFLY_URL"),
@@ -33,6 +37,7 @@ func LoadConfig() *Config {
 		Port:         os.Getenv("PORT"),
 		DatabaseURL:  os.Getenv("DATABASE_URL"),
 		CSRFKey:      os.Getenv("CSRF_KEY"),
+		Debug:        debugBool,
 	}
 
 	return config

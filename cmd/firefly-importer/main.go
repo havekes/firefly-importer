@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"firefly-importer/config"
 	"firefly-importer/db"
@@ -40,8 +42,18 @@ func plaintextMiddleware(next http.Handler) http.Handler {
 func main() {
 	cfg := config.LoadConfig()
 
+	if cfg.Debug {
+		opts := &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		}
+		logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
+		slog.SetDefault(logger)
+
+		db.EnableQueryLogging(true)
+		log.Println("DEBUG mode and query logging enabled")
+	}
+
 	log.Printf("Starting Firefly Importer on port %s", cfg.Port)
-	log.Printf("Using Firefly API URL: %s", cfg.FireflyURL)
 
 	dbConn, err := db.InitDB(cfg.DatabaseURL)
 	if err != nil {

@@ -256,7 +256,7 @@ type fireflyStoreTransactionRequest struct {
 }
 
 type storeTx struct {
-	Date            string `json:"date"` // YYYY-MM-DD
+	Date            string `json:"date"` // RFC3339
 	Description     string `json:"description"`
 	Amount          string `json:"amount"`
 	Type            string `json:"type"`
@@ -270,10 +270,15 @@ type storeTx struct {
 
 // StoreTransaction posts a single transaction to Firefly III
 func (c *Client) StoreTransaction(tx models.Transaction) error {
+	dateStr := tx.Date
+	if parsedDate, err := time.ParseInLocation("2006-01-02", tx.Date, time.Local); err == nil {
+		dateStr = parsedDate.Format(time.RFC3339)
+	}
+
 	payload := fireflyStoreTransactionRequest{
 		Transactions: []storeTx{
 			{
-				Date:            tx.Date,
+				Date:            dateStr,
 				Description:     tx.Description,
 				Amount:          fmt.Sprintf("%.2f", tx.Amount),
 				Type:            tx.Type,

@@ -132,6 +132,7 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	ext := strings.ToLower(filepath.Ext(header.Filename))
+	fileDate := r.FormValue("file_date")
 
 	var parsedTransactions []models.Transaction
 	var parseErr error
@@ -140,7 +141,7 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	case ".csv":
 		parsedTransactions, parseErr = parser.ParseCSV(file)
 	case ".png", ".jpg", ".jpeg":
-		parsedTransactions, parseErr = parser.ParseImage(file, h.Config.VisionAPIURL, h.Config.VisionAPIKey, h.Config.VisionModel)
+		parsedTransactions, parseErr = parser.ParseImage(file, fileDate, h.Config.VisionAPIURL, h.Config.VisionAPIKey, h.Config.VisionModel)
 	default:
 		h.renderError(w, r, http.StatusBadRequest, fmt.Sprintf("Unsupported file type: %q", ext), nil)
 		return
@@ -157,8 +158,10 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to fetch name mappings (ignoring): %v", err)
 	} else if len(mappings) > 0 {
 		for i, tx := range parsedTransactions {
-			if newName, ok := mappings[tx.OriginalDescription]; ok {
-				parsedTransactions[i].SuggestedDescription = newName
+			if m, ok := mappings[tx.OriginalDescription]; ok {
+				parsedTransactions[i].SuggestedDescription = m.NewName
+				parsedTransactions[i].SuggestedBudget = m.BudgetName
+				parsedTransactions[i].SuggestedCategory = m.CategoryName
 			}
 		}
 	}
@@ -259,10 +262,10 @@ func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 				errorCount++
 			} else {
 				addedCount++
-				// If the description was edited mapping to a new name, save the mapping
-				if tx.OriginalDescription != "" && tx.OriginalDescription != tx.Description {
-					if err := db.SaveMapping(h.DB, tx.OriginalDescription, tx.Description); err != nil {
-						log.Printf("Failed to save name mapping for %q -> %q: %v", tx.OriginalDescription, tx.Description, err)
+				// If the description was edited mapping to a new name or budget/category were added, save the mapping
+				if tx.OriginalDescription != "" && (tx.OriginalDescription != tx.Description || tx.BudgetName != "" || tx.CategoryName != "") {
+					if err := db.SaveMapping(h.DB, tx.OriginalDescription, tx.Description, tx.BudgetName, tx.CategoryName); err != nil {
+						log.Printf("Failed to save mapping for %q -> %q, Budget: %q, Category: %q: %v", tx.OriginalDescription, tx.Description, tx.BudgetName, tx.CategoryName, err)
 					}
 				}
 			}

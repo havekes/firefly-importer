@@ -62,7 +62,18 @@
         <p class="text-sm text-base-content/70 mb-5">Supported formats: CSV, PNG, JPG</p>
 
         <form hx-post="/upload" hx-encoding="multipart/form-data" hx-target="#main-content" hx-select="#main-content"
-          hx-swap="outerHTML" class="flex flex-col sm:flex-row sm:items-end gap-8">
+          hx-swap="outerHTML" class="flex flex-col sm:flex-row sm:items-end gap-8" x-data="{
+            fileDate: '',
+            extractDate(e) {
+              const files = e.target.files;
+              if (files && files.length > 0) {
+                let d = new Date(files[0].lastModified);
+                this.fileDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+              } else {
+                this.fileDate = '';
+              }
+            }
+          }">
           {{ .CSRFField }}
 
           <!-- Account Dropdown -->
@@ -86,8 +97,9 @@
             <label for="file" class="label">
               <span class="label-text font-medium">Statement File</span>
             </label>
+            <input type="hidden" id="file_date" name="file_date" :value="fileDate" />
             <input id="file" name="file" type="file" accept=".csv,.png,.jpg,.jpeg"
-              class="file-input file-input-bordered file-input-primary w-full" required />
+              class="file-input file-input-bordered file-input-primary w-full" required @change="extractDate($event)" />
           </div>
 
           <!-- Submit -->
@@ -220,7 +232,7 @@
                         class="tx-desc input input-bordered input-sm w-full" placeholder="Description...">
                       <template x-if="tx.suggested_description">
                         <button type="button" class="text-xs text-info text-left hover:underline w-fit"
-                          @click="document.getElementById('desc-' + i).value = tx.suggested_description; $el.style.display = 'none'"
+                          @click="document.getElementById('desc-' + i).value = tx.suggested_description"
                           x-text="'Suggestion: ' + tx.suggested_description"></button>
                       </template>
                     </div>
@@ -230,13 +242,27 @@
                     x-text="parseFloat(tx.amount).toFixed(2)"></td>
                   <td class="capitalize text-base-content/80" x-text="tx.type"></td>
                   <td>
-                    <input type="text" list="budgets-list" :data-index="i" x-show="tx.status === 'Added'"
-                      class="tx-budget input input-bordered input-sm w-full max-w-xs" placeholder="Budget..."
-                      :disabled="tx.type === 'deposit'">
+                    <div class="flex flex-col gap-1 w-full max-w-xs">
+                      <input type="text" list="budgets-list" :data-index="i" x-show="tx.status === 'Added'"
+                        class="tx-budget input input-bordered input-sm w-full" placeholder="Budget..."
+                        :disabled="tx.type === 'deposit'">
+                      <template x-if="tx.suggested_budget && tx.type !== 'deposit'">
+                        <button type="button" class="text-xs text-info text-left hover:underline w-fit"
+                          @click="document.querySelector(`.tx-budget[data-index='${i}']`).value = tx.suggested_budget"
+                          x-text="'Suggestion: ' + tx.suggested_budget"></button>
+                      </template>
+                    </div>
                   </td>
                   <td>
-                    <input type="text" list="categories-list" :data-index="i" x-show="tx.status === 'Added'"
-                      class="tx-category input input-bordered input-sm w-full max-w-xs" placeholder="Category...">
+                    <div class="flex flex-col gap-1 w-full max-w-xs">
+                      <input type="text" list="categories-list" :data-index="i" x-show="tx.status === 'Added'"
+                        class="tx-category input input-bordered input-sm w-full" placeholder="Category...">
+                      <template x-if="tx.suggested_category">
+                        <button type="button" class="text-xs text-info text-left hover:underline w-fit"
+                          @click="document.querySelector(`.tx-category[data-index='${i}']`).value = tx.suggested_category"
+                          x-text="'Suggestion: ' + tx.suggested_category"></button>
+                      </template>
+                    </div>
                   </td>
                   <td>
                     <span class="badge font-medium whitespace-nowrap gap-1" :class="{
