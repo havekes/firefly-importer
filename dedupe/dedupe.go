@@ -7,9 +7,9 @@ import (
 )
 
 // GenerateHash generates a SHA-256 hash for a transaction based on Date, Description, and Amount
-func GenerateHash(tx models.Transaction, description string) string {
+func GenerateHash(tx models.Transaction) string {
 	// We format the amount predictably to avoid floating point inconsistencies
-	data := fmt.Sprintf("%s|%s|%.2f|%s", tx.Date, description, tx.Amount, tx.Type)
+	data := fmt.Sprintf("%s|%s|%.2f|%s", tx.Date, tx.Description, tx.Amount, tx.Type)
 	hash := sha256.Sum256([]byte(data))
 	return fmt.Sprintf("%x", hash)
 }
@@ -19,7 +19,7 @@ func Filter(incoming []models.Transaction, existing []models.Transaction) []mode
 	// Create a map of existing hashes for O(1) lookup
 	existingHashes := make(map[string]bool, len(existing))
 	for _, tx := range existing {
-		hash := GenerateHash(tx, tx.Description)
+		hash := GenerateHash(tx)
 		existingHashes[hash] = true
 	}
 
@@ -33,9 +33,8 @@ func Filter(incoming []models.Transaction, existing []models.Transaction) []mode
 			continue
 		}
 
-		hash := GenerateHash(tx, tx.Description)
-		mappedDescriptionHash := GenerateHash(tx, tx.SuggestedDescription)
-		if existingHashes[hash] || existingHashes[mappedDescriptionHash] {
+		hash := GenerateHash(tx)
+		if existingHashes[hash] {
 			result[i].Status = models.StatusSkipped
 		} else {
 			result[i].Status = models.StatusAdded

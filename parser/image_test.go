@@ -43,7 +43,7 @@ func TestParseImage(t *testing.T) {
 	// Provide a dummy image
 	imageReader := strings.NewReader("dummy image content representing bytes")
 
-	txs, err := ParseImage(imageReader, "2023-11-15", mockServer.URL, "test-key", "gpt-4-vision-preview")
+	txs, err := ParseImage(imageReader, mockServer.URL, "test-key", "gpt-4-vision-preview")
 	if err != nil {
 		t.Fatalf("ParseImage failed: %v", err)
 	}

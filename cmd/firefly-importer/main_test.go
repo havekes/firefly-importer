@@ -49,7 +49,7 @@ func TestRouting(t *testing.T) {
 		FireflyURL: "http://example.com/api/v1",
 	}
 
-	mux := setupRouter(cfg, nil)
+	mux := setupRouter(cfg)
 
 	// Test GET / route
 	// IndexHandler calls the Firefly API which is unreachable → expect 500
@@ -72,17 +72,15 @@ func TestRouting(t *testing.T) {
 	}
 
 	// Test POST /save route
-	// SaveHandler: empty transactions list → 200 OK with added:0 HTML partial
-	payload := `{"transactions":[]}`
-	req, _ = http.NewRequest("POST", "/save", strings.NewReader("payload="+payload))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	// SaveHandler: empty transactions list → 200 OK with added:0
+	req, _ = http.NewRequest("POST", "/save", strings.NewReader(`{"transactions":[]}`))
 	rr = httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Errorf("POST /save expected 200, got %d", rr.Code)
 	}
-	if !strings.Contains(rr.Body.String(), `Saved 0 transaction(s) successfully!`) {
+	if !strings.Contains(rr.Body.String(), `"added":0`) {
 		t.Errorf("POST /save unexpected body: %s", rr.Body.String())
 	}
 }

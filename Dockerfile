@@ -1,6 +1,6 @@
 FROM golang:1.26-alpine
 
-RUN apk add --no-cache git tzdata
+RUN apk add --no-cache git
 
 RUN go install github.com/bokwoon95/wgo@latest
 

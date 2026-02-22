@@ -29,7 +29,7 @@ func TestIndexHandler(t *testing.T) {
 
 	client := firefly.NewClient(mockServer.URL, "test-token")
 	cfg := &config.Config{}
-	appHandler := NewAppHandler(client, cfg, nil)
+	appHandler := NewAppHandler(client, cfg)
 
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
@@ -60,11 +60,10 @@ func TestSaveHandler(t *testing.T) {
 
 	client := firefly.NewClient(mockServer.URL, "test-token")
 	cfg := &config.Config{}
-	appHandler := NewAppHandler(client, cfg, nil)
+	appHandler := NewAppHandler(client, cfg)
 
 	body := `{"transactions": [{"date": "2023-12-01", "description": "Test", "amount": 10.0, "type": "withdrawal", "source_id": "1", "status": "Added"}]}`
-	req, err := http.NewRequest("POST", "/save", strings.NewReader("payload="+body))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req, err := http.NewRequest("POST", "/save", strings.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +75,7 @@ func TestSaveHandler(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	if !strings.Contains(rr.Body.String(), `Saved 1 transaction(s) successfully!`) {
+	if !strings.Contains(rr.Body.String(), `"added":1`) {
 		t.Errorf("handler returned unexpected body: got %v", rr.Body.String())
 	}
 }
