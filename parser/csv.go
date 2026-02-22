@@ -61,11 +61,12 @@ func ParseCSV(r io.Reader) ([]models.Transaction, error) {
 		txType := strings.ToLower(strings.TrimSpace(record[3]))
 
 		transactions = append(transactions, models.Transaction{
-			Date:        dateStr,
-			Description: description,
-			Amount:      amount,
-			Type:        txType,
-			Status:      models.StatusPending,
+			Date:                dateStr,
+			Description:         description,
+			OriginalDescription: description,
+			Amount:              amount,
+			Type:                txType,
+			Status:              models.StatusPending,
 		})
 	}
 

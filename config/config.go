@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -14,6 +15,9 @@ type Config struct {
 	VisionAPIKey string
 	VisionModel  string
 	Port         string
+	DatabaseURL  string
+	CSRFKey      string
+	Debug        bool
 }
 
 func LoadConfig() *Config {
@@ -22,6 +26,8 @@ func LoadConfig() *Config {
 		log.Println("No .env file found, reading configuration from environment variables")
 	}
 
+	debugBool, _ := strconv.ParseBool(os.Getenv("DEBUG"))
+
 	config := &Config{
 		FireflyURL:   os.Getenv("FIREFLY_URL"),
 		FireflyToken: os.Getenv("FIREFLY_TOKEN"),
@@ -29,17 +35,9 @@ func LoadConfig() *Config {
 		VisionAPIKey: os.Getenv("VISION_API_KEY"),
 		VisionModel:  os.Getenv("VISION_API_MODEL"),
 		Port:         os.Getenv("PORT"),
-	}
-
-	// Set defaults
-	if config.Port == "" {
-		config.Port = "8080"
-	}
-	if config.FireflyURL == "" {
-		config.FireflyURL = "https://firefly.havek.es/api/v1"
-	}
-	if config.VisionModel == "" {
-		config.VisionModel = "gpt-4-vision-preview"
+		DatabaseURL:  os.Getenv("DATABASE_URL"),
+		CSRFKey:      os.Getenv("CSRF_KEY"),
+		Debug:        debugBool,
 	}
 
 	return config
