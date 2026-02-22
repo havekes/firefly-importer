@@ -134,6 +134,42 @@ func TestStoreTransaction(t *testing.T) {
 	}
 }
 
+func TestStoreTransactions(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("Expected POST request, got %s", r.Method)
+		}
+
+		var reqPayload fireflyStoreTransactionRequest
+		if err := json.NewDecoder(r.Body).Decode(&reqPayload); err != nil {
+			t.Fatalf("Failed to decode store request: %v", err)
+		}
+
+		if len(reqPayload.Transactions) != 2 {
+			t.Fatalf("Expected 2 transactions in payload, got %d", len(reqPayload.Transactions))
+		}
+
+		if reqPayload.Transactions[0].Description != "Lunch" || reqPayload.Transactions[1].Description != "Dinner" {
+			t.Errorf("Unexpected transaction descriptions")
+		}
+
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer mockServer.Close()
+
+	client := NewClient(mockServer.URL, "test-token")
+
+	txs := []models.Transaction{
+		{Date: "2023-12-05", Description: "Lunch", Amount: 12.50, Type: "withdrawal"},
+		{Date: "2023-12-05", Description: "Dinner", Amount: 25.00, Type: "withdrawal"},
+	}
+
+	err := client.StoreTransactions(txs)
+	if err != nil {
+		t.Fatalf("StoreTransactions failed: %v", err)
+	}
+}
+
 func TestGetAccounts(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {

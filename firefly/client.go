@@ -270,26 +270,38 @@ type storeTx struct {
 
 // StoreTransaction posts a single transaction to Firefly III
 func (c *Client) StoreTransaction(tx models.Transaction) error {
+	return c.StoreTransactions([]models.Transaction{tx})
+}
+
+// StoreTransactions posts multiple transactions to Firefly III in a single request
+func (c *Client) StoreTransactions(txs []models.Transaction) error {
+	if len(txs) == 0 {
+		return nil
+	}
+
+	transactions := make([]storeTx, len(txs))
+	for i, tx := range txs {
+		transactions[i] = storeTx{
+			Date:            tx.Date,
+			Description:     tx.Description,
+			Amount:          fmt.Sprintf("%.2f", tx.Amount),
+			Type:            tx.Type,
+			SourceName:      tx.SourceName,
+			SourceID:        tx.SourceID,
+			DestinationName: tx.DestinationName,
+			DestinationID:   tx.DestinationID,
+			BudgetName:      tx.BudgetName,
+			CategoryName:    tx.CategoryName,
+		}
+	}
+
 	payload := fireflyStoreTransactionRequest{
-		Transactions: []storeTx{
-			{
-				Date:            tx.Date,
-				Description:     tx.Description,
-				Amount:          fmt.Sprintf("%.2f", tx.Amount),
-				Type:            tx.Type,
-				SourceName:      tx.SourceName,
-				SourceID:        tx.SourceID,
-				DestinationName: tx.DestinationName,
-				DestinationID:   tx.DestinationID,
-				BudgetName:      tx.BudgetName,
-				CategoryName:    tx.CategoryName,
-			},
-		},
+		Transactions: transactions,
 	}
 
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to encode transaction: %w", err)
+		return fmt.Errorf("failed to encode transactions: %w", err)
 	}
 
 	req, err := http.NewRequest("POST", c.BaseURL+"/transactions", bytes.NewBuffer(bodyBytes))

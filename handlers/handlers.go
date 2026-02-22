@@ -208,21 +208,24 @@ func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var toAdd []models.Transaction
+	for _, tx := range req.Transactions {
+		if tx.Status == models.StatusAdded {
+			toAdd = append(toAdd, tx)
+		}
+	}
+
 	addedCount := 0
 	errorCount := 0
 	var firstErr error
 
-	for _, tx := range req.Transactions {
-		if tx.Status == models.StatusAdded {
-			if err := h.Client.StoreTransaction(tx); err != nil {
-				log.Printf("SaveHandler: failed to store transaction %q: %v", tx.Description, err)
-				if firstErr == nil {
-					firstErr = err
-				}
-				errorCount++
-			} else {
-				addedCount++
-			}
+	if len(toAdd) > 0 {
+		if err := h.Client.StoreTransactions(toAdd); err != nil {
+			log.Printf("SaveHandler: failed to store transactions: %v", err)
+			firstErr = err
+			errorCount = len(toAdd)
+		} else {
+			addedCount = len(toAdd)
 		}
 	}
 
@@ -234,7 +237,7 @@ func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 			"status": "error",
 			"added":  addedCount,
 			"errors": errorCount,
-			"error":  fmt.Sprintf("All %d transaction(s) failed to save. First error: %v", errorCount, firstErr),
+			"error":  fmt.Sprintf("Failed to save transaction(s). Error: %v", firstErr),
 		})
 		return
 	}
