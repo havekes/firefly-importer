@@ -43,7 +43,7 @@ func renderPage(w http.ResponseWriter, data PageData) {
 	tmpl, err := template.ParseFS(templateFS, "templates/index.html")
 	if err != nil {
 		log.Printf("template parse error: %v", err)
-		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -62,12 +62,7 @@ func (h *AppHandler) renderError(w http.ResponseWriter, statusCode int, msg stri
 		log.Printf("error: %s", msg)
 	}
 
-	var errMsg string
-	if err != nil {
-		errMsg = fmt.Sprintf("%s: %v", msg, err)
-	} else {
-		errMsg = msg
-	}
+	errMsg := msg
 
 	w.WriteHeader(statusCode)
 
@@ -203,7 +198,7 @@ func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "error",
-			"error":  fmt.Sprintf("Failed to parse request body: %v", err),
+			"error":  "Failed to parse request body",
 		})
 		return
 	}
@@ -229,12 +224,13 @@ func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if errorCount > 0 && addedCount == 0 {
 		// All transactions failed — report as an error
+		log.Printf("SaveHandler: all transactions failed to save. First error: %v", firstErr)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "error",
 			"added":  addedCount,
 			"errors": errorCount,
-			"error":  fmt.Sprintf("All %d transaction(s) failed to save. First error: %v", errorCount, firstErr),
+			"error":  fmt.Sprintf("All %d transaction(s) failed to save", errorCount),
 		})
 		return
 	}
