@@ -8,7 +8,7 @@ The codebase follows Domain-Driven Design principles with a clean separation of 
 
 ## Tech Stack
 
-- **Language**: Go 1.22+
+- **Language**: Go 1.26+
 - **Containerization**: Docker & Docker Compose
 - **Dependencies**: Standard library `net/http` for the web server (no external web framework), `encoding/csv`, `encoding/json`.
 - **External APIs**:
@@ -23,7 +23,7 @@ The codebase follows Domain-Driven Design principles with a clean separation of 
 - `firefly/`: Client for interacting with the Firefly III API.
 - `handlers/`: HTTP request handlers and routing logic.
 - `models/`: Shared data structures (Domain Models).
-- `parser/`: Parsing logic for CSVs and Images (OCR).
+- `parser/`: Parsing logic for CSVs and screenshots (using an OpenAI-compatible Vision API).
 
 ## Coding Guidelines & Standards
 
