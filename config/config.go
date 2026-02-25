@@ -17,6 +17,7 @@ type Config struct {
 	Port         string
 	DatabaseURL  string
 	CSRFKey      string
+	Hostname     string
 	Debug        bool
 }
 
@@ -37,6 +38,7 @@ func LoadConfig() *Config {
 		Port:         os.Getenv("PORT"),
 		DatabaseURL:  os.Getenv("DATABASE_URL"),
 		CSRFKey:      os.Getenv("CSRF_KEY"),
+		Hostname:     os.Getenv("HOSTNAME"),
 		Debug:        debugBool,
 	}
 
