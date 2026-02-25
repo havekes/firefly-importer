@@ -1,6 +1,8 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      target: dev
     working_dir: /app
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
@@ -19,7 +21,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: firefly_importer
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/18/docker
     restart: unless-stopped

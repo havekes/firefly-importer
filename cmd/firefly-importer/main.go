@@ -77,10 +77,25 @@ func main() {
 	// Wrap the mux with CSRF protection middleware
 	// Secure(false) ensures the CSRF cookie is sent over HTTP (not just HTTPS)
 	// Path("/") ensures the cookie applies to all routes
-	csrfMiddleware := csrf.Protect(csrfKey,
+	// Build CSRF options
+	csrfOpts := []csrf.Option{
 		csrf.Secure(false),
 		csrf.Path("/"),
-	)
+		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			err := csrf.FailureReason(r)
+			http.Error(w, fmt.Sprintf("CSRF Validation Failed: %v", err), http.StatusForbidden)
+		})),
+	}
+
+	// When behind a reverse proxy (HTTPS → HTTP), the browser sends
+	// Origin: https://hostname but the app sees plain HTTP. TrustedOrigins
+	// tells gorilla/csrf to accept this mismatch.
+	if cfg.Hostname != "" {
+		log.Printf("Adding TrustedOrigin: %s", cfg.Hostname)
+		csrfOpts = append(csrfOpts, csrf.TrustedOrigins([]string{cfg.Hostname}))
+	}
+
+	csrfMiddleware := csrf.Protect(csrfKey, csrfOpts...)
 
 	// plaintextMiddleware tells gorilla/csrf we're serving over HTTP,
 	// so it skips the strict HTTPS Referer validation that causes 403s.
