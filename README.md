@@ -1,44 +1,70 @@
 # Firefly III Statement Importer
 
-A stateless Go web application to act as a smart middleman for Firefly III. The app parses CSV files and screenshots, deduplicates transactions against your actual Firefly instance, and pushes them seamlessly via the API.
-
-## Project Structure
-
-The project follows domain-driven design principles with separation of concerns:
-
-- `cmd/firefly-importer/` - Main application entry point (`main.go`).
-- `config/` - Handles loading environment variables and configuration.
-- `dedupe/` - Deduplication logic mapping imported transactions to existing Firefly records via SHA-256 caching.
-- `firefly/` - Communication layer and API client for your Firefly III instance.
-- `handlers/` - HTTP request handlers and router setup.
-- `models/` - Shared data structs used across the application (e.g., `Transaction`, `Account`).
-- `parser/` - File parsing logic handling standard CSV datasets as well as Screenshot OCR via a local OpenAI-compatible Vision API.
+A Go web application to act as a smart middleman for Firefly III. The app parses CSV files and screenshots, deduplicates transactions against your actual Firefly instance, and pushes them seamlessly via the API.
 
 ## Prerequisites
 
-- **Docker** and **Docker Compose** (Recommended)
-- Go 1.22+ (if running on the host natively)
-- A running [Firefly III](https://www.firefly-iii.org/) instance and a Personal Access Token
-- An OpenAI-compatible Vision API for receipt/screenshot parsing
+- A running [Firefly III](https://www.firefly-iii.org/) instance and a [Personal Access Token](https://docs.firefly-iii.org/how-to/firefly-iii/features/api/#personal-access-tokens)
+- An OpenAI-compatible Vision API for receipt/screenshot parsing ()
 
 ## Getting Started
 
-### 1. Configuration
+The recommended way to run the application is using Docker compose.
 
-Before running the application, you need to set up the environment variables:
+Here's a base compose file you can use as a starting point:
 
-1. Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
-2. Open `.env` and fill in your details:
-   - `FIREFLY_URL`: URL to your Firefly III API (e.g., `https://firefly.example.com/api/v1`)
-   - `FIREFLY_TOKEN`: Your Firefly III Personal Access Token
-   - `VISION_API_URL`: Your local or hosted Vision API endpoint
-   - `VISION_API_KEY`: API Key for the Vision API
-   - `PORT`: The port your app will run on (Default `8080`)
+```yaml
+services:
+  firefly-importer:
+    image: ghcr.io/havekes/firefly-importer:latest
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
 
-### 2. Running the Application locally (Docker Compose)
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - postgres-data:/var/lib/postgresql/18/docker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-d", "${POSTGRES_DB}"]
+      interval: 5m
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+
+volumes:
+  postgres-data:
+```
+
+Before running the application, you need to set up the environment variables.
+Replace all variables in braces with proper values.
+
+```ini
+# firefly-importer
+PORT="8080"
+DATABASE_URL="postgres://{{ firefly_importer_db_user }}:{{ firefly_importer_db_password }}@postgres:5432/firefly_importer?sslmode=disable"
+# Strong random 32 bit key
+CSRF_KEY=
+
+FIREFLY_URL=https://firefly.example.com/api/v1
+FIREFLY_TOKEN=
+
+VISION_API_URL=https://api.openai.com/v1
+VISION_API_KEY=
+VISION_API_MODEL=gpt-5-mini
+
+# postgres
+POSTGRES_USER={{ firefly_importer_db_user }}
+POSTGRES_PASSWORD={{ firefly_importer_db_password }}
+POSTGRES_DB=firefly_importer
+```
+
+## Running locally during development
 
 To start the application in a Docker container, run:
 
@@ -58,20 +84,6 @@ To stop the web server:
 ```bash
 docker compose down
 ```
-
-### 3. Running with Go locally (Alternative)
-
-If you prefer to run it natively without Docker:
-
-```bash
-# Download dependencies
-go mod download
-
-# Run the project
-go run cmd/firefly-importer/main.go
-```
-
-The application will be bound to the specified port and act identically to the containerized version.
 
 ## License
 
