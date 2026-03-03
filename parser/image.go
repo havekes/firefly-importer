@@ -73,7 +73,7 @@ func ParseImage(r io.Reader, fileDate, visionAPIURL, visionAPIKey, visionModel s
 	Description should only contain transaction title, not the full transaction details.
 	Assume the year is ` + currentYear + ` if not provided in the image.
 	Today's date is ` + currentDate + `, use this to resolve relative dates like "today" or "yesterday".
-	Do not include markdown blocks like ` + "```json" + ` or any other text.`
+	Do not include markdown blocks like ` + "```json" + `, ` + "```" + `, or any other text.`
 
 	payload := visionRequest{
 		Model: visionModel,

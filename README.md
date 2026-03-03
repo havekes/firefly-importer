@@ -11,14 +11,25 @@ A Go web application to act as a smart middleman for Firefly III. The app parses
 
 The recommended way to run the application is using Docker compose.
 
-Here's a base compose file you can use as a starting point:
+We provide a base compose file you can use as a starting point.
+Before running the application, you need to set up the environment variables.
+Replace all variables in braces with proper values.
 
 ```yaml
 services:
   firefly-importer:
     image: ghcr.io/havekes/firefly-importer:latest
     restart: unless-stopped
-    env_file: .env
+    environment:
+      - PORT="8080"
+      - DATABASE_URL="postgres://{{ firefly_importer_db_user }}:{{ firefly_importer_db_password }}@postgres:5432/firefly_importer?sslmode=disable"
+      - CSRF_KEY= # Strong random 32 bit key
+      - FIREFLY_URL=https://firefly.example.com/api/v1
+      - FIREFLY_TOKEN=
+      - VISION_API_URL=https://api.openai.com/v1
+      - VISION_API_KEY=
+      - VISION_API_MODEL=gpt-5-mini
+
     depends_on:
       - postgres
     ports:
@@ -27,7 +38,10 @@ services:
   postgres:
     image: postgres:18
     restart: unless-stopped
-    env_file: .env
+    environment:
+      - POSTGRES_USER={{ firefly_importer_db_user }}
+      - POSTGRES_PASSWORD={{ firefly_importer_db_password }}
+      - POSTGRES_DB=firefly_importer
     volumes:
       - postgres-data:/var/lib/postgresql/18/docker
     healthcheck:
@@ -39,29 +53,6 @@ services:
 
 volumes:
   postgres-data:
-```
-
-Before running the application, you need to set up the environment variables.
-Replace all variables in braces with proper values.
-
-```ini
-# firefly-importer
-PORT="8080"
-DATABASE_URL="postgres://{{ firefly_importer_db_user }}:{{ firefly_importer_db_password }}@postgres:5432/firefly_importer?sslmode=disable"
-# Strong random 32 bit key
-CSRF_KEY=
-
-FIREFLY_URL=https://firefly.example.com/api/v1
-FIREFLY_TOKEN=
-
-VISION_API_URL=https://api.openai.com/v1
-VISION_API_KEY=
-VISION_API_MODEL=gpt-5-mini
-
-# postgres
-POSTGRES_USER={{ firefly_importer_db_user }}
-POSTGRES_PASSWORD={{ firefly_importer_db_password }}
-POSTGRES_DB=firefly_importer
 ```
 
 ## Running locally during development
