@@ -11,7 +11,7 @@ func (c *Client) GetBudgets() ([]models.Budget, error) {
 		return nil, err
 	}
 
-	var budgets []models.Budget
+var budgets = make([]models.Budget, 0, len(resources))
 	for _, item := range resources {
 		budgets = append(budgets, models.Budget{
 			ID:   item.ID,
