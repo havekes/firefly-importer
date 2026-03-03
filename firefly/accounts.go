@@ -38,7 +38,7 @@ func (c *Client) GetAccounts() ([]models.Account, error) {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-accounts := make([]models.Account, 0, len(fireflyResp.Data))
+	var accounts []models.Account
 	for _, item := range fireflyResp.Data {
 		accounts = append(accounts, models.Account{
 			ID:   item.ID,

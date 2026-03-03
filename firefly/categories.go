@@ -11,7 +11,7 @@ func (c *Client) GetCategories() ([]models.Category, error) {
 		return nil, err
 	}
 
-var categories = make([]models.Category, 0, len(resources))
+	var categories []models.Category
 	for _, item := range resources {
 		categories = append(categories, models.Category{
 			ID:   item.ID,

@@ -32,7 +32,7 @@ type fireflyTransactionResponse struct {
 func (c *Client) GetRecentTransactions(accountID string, daysOffset int) ([]models.Transaction, error) {
 	endDate := time.Now().Format("2006-01-02")
 	startDate := time.Now().AddDate(0, 0, -daysOffset).Format("2006-01-02")
-req, err := http.NewRequest("GET", c.BaseURL+"/accounts/"+url.PathEscape(accountID)+"/transactions?start="+startDate+"&end="+endDate, nil)
+	req, err := http.NewRequest("GET", c.BaseURL+"/accounts/"+accountID+"/transactions?start="+startDate+"&end="+endDate, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -111,11 +111,10 @@ type storeTx struct {
 
 // StoreTransaction posts a single transaction to Firefly III
 func (c *Client) StoreTransaction(tx models.Transaction) error {
-parsedDate, err := time.ParseInLocation("2006-01-02", tx.Date, time.Local)
-	if err != nil {
-		return fmt.Errorf("failed to parse transaction date %q: %w", tx.Date, err)
+	dateStr := tx.Date
+	if parsedDate, err := time.ParseInLocation("2006-01-02", tx.Date, time.Local); err == nil {
+		dateStr = parsedDate.Format(time.RFC3339)
 	}
-	dateStr := parsedDate.Format(time.RFC3339)
 
 	payload := fireflyStoreTransactionRequest{
 		Transactions: []storeTx{
