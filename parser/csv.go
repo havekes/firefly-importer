@@ -3,7 +3,9 @@ package parser
 import (
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -37,14 +39,25 @@ func ParseCSV(r io.Reader) ([]models.Transaction, error) {
 		}
 
 		if len(record) < 4 {
-			continue // Skip incomplete rows
+			log.Printf("CSV parse error: incomplete row: %v", record)
+			transactions = append(transactions, models.Transaction{
+				Description: fmt.Sprintf("Incomplete row: %v", record),
+				Status:      models.StatusError,
+			})
+			continue
 		}
 
 		dateStr := strings.TrimSpace(record[0])
 
 		// Attempt simple YYYY-MM-DD validation
 		if _, err := time.Parse("2006-01-02", dateStr); err != nil {
-			continue // Skip rows with invalid date formats
+			log.Printf("CSV parse error: invalid date format %q: %v", dateStr, err)
+			transactions = append(transactions, models.Transaction{
+				Date:        dateStr,
+				Description: fmt.Sprintf("Invalid date format: %v", err),
+				Status:      models.StatusError,
+			})
+			continue
 		}
 
 		description := strings.TrimSpace(record[1])
@@ -52,7 +65,13 @@ func ParseCSV(r io.Reader) ([]models.Transaction, error) {
 		amountStr := strings.TrimSpace(record[2])
 		amount, err := strconv.ParseFloat(amountStr, 64)
 		if err != nil {
-			continue // Skip rows with invalid amounts
+			log.Printf("CSV parse error: invalid amount %q: %v", amountStr, err)
+			transactions = append(transactions, models.Transaction{
+				Date:        dateStr,
+				Description: fmt.Sprintf("Invalid amount %q: %v", amountStr, err),
+				Status:      models.StatusError,
+			})
+			continue
 		}
 		if amount < 0 {
 			amount = -amount // Ensure absolute value

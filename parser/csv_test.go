@@ -19,8 +19,8 @@ invalid,bad_row,amount,error`
 		t.Fatalf("ParseCSV failed: %v", err)
 	}
 
-	if len(txs) != 2 {
-		t.Errorf("Expected 2 transactions, got %d", len(txs))
+	if len(txs) != 3 {
+		t.Errorf("Expected 3 transactions (including 1 error), got %d", len(txs))
 	}
 
 	// Verify first transaction
@@ -49,5 +49,13 @@ invalid,bad_row,amount,error`
 	}
 	if txs[1].Type != "deposit" {
 		t.Errorf("Expected Type deposit, got %s", txs[1].Type)
+	}
+
+	// Verify third transaction (the errored one)
+	if txs[2].Status != models.StatusError {
+		t.Errorf("Expected Status Error, got %s", txs[2].Status)
+	}
+	if !strings.Contains(txs[2].Description, "Invalid date format") {
+		t.Errorf("Expected error message about invalid date, got %s", txs[2].Description)
 	}
 }
