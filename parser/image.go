@@ -59,13 +59,13 @@ func ParseImage(r io.Reader, fileDate, visionAPIURL, visionAPIKey, visionModel s
 	currentDate := fileDate
 	if currentDate == "" {
 		currentDate = time.Now().Format("2006-01-02")
-	}
-	currentYear := ""
-	if len(currentDate) >= 4 {
-		currentYear = currentDate[:4]
 	} else {
-		currentYear = time.Now().Format("2006")
+		// Validate fileDate format to prevent prompt injection
+		if _, err := time.Parse("2006-01-02", currentDate); err != nil {
+			return nil, fmt.Errorf("invalid file date format (expected YYYY-MM-DD): %w", err)
+		}
 	}
+	currentYear := currentDate[:4]
 
 	// Construct OpenAI-compatible payload
 	prompt := `Extract bank transactions from this image. Return ONLY a JSON array with objects containing:
