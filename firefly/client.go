@@ -216,6 +216,15 @@ func (c *Client) getPaginatedBasicResources(endpoint string) ([]basicResource, e
 	return allResources, nil
 }
 
+// mapResources is a generic helper to map basicResources to a slice of T
+func mapResources[T any](resources []basicResource, mapper func(basicResource) T) []T {
+	result := make([]T, 0, len(resources))
+	for _, item := range resources {
+		result = append(result, mapper(item))
+	}
+	return result
+}
+
 // GetBudgets fetches budgets from Firefly III
 func (c *Client) GetBudgets() ([]models.Budget, error) {
 	resources, err := c.getPaginatedBasicResources("/budgets")
@@ -223,15 +232,12 @@ func (c *Client) GetBudgets() ([]models.Budget, error) {
 		return nil, err
 	}
 
-	var budgets []models.Budget
-	for _, item := range resources {
-		budgets = append(budgets, models.Budget{
+	return mapResources(resources, func(item basicResource) models.Budget {
+		return models.Budget{
 			ID:   item.ID,
 			Name: item.Attributes.Name,
-		})
-	}
-
-	return budgets, nil
+		}
+	}), nil
 }
 
 // GetCategories fetches categories from Firefly III
@@ -241,15 +247,12 @@ func (c *Client) GetCategories() ([]models.Category, error) {
 		return nil, err
 	}
 
-	var categories []models.Category
-	for _, item := range resources {
-		categories = append(categories, models.Category{
+	return mapResources(resources, func(item basicResource) models.Category {
+		return models.Category{
 			ID:   item.ID,
 			Name: item.Attributes.Name,
-		})
-	}
-
-	return categories, nil
+		}
+	}), nil
 }
 
 // fireflyStoreTransactionRequest represents the payload to create a new transaction

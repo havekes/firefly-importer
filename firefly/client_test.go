@@ -184,3 +184,103 @@ func TestGetAccounts(t *testing.T) {
 		t.Errorf("Expected Name Checking Account, got %s", accounts[0].Name)
 	}
 }
+
+func TestGetBudgets(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("Expected GET request, got %s", r.Method)
+		}
+		if r.URL.Path != "/budgets" {
+			t.Errorf("Expected path /budgets, got %s", r.URL.Path)
+		}
+
+		mockResponse := `{
+			"data": [
+				{
+					"id": "10",
+					"attributes": {
+						"name": "Groceries"
+					}
+				}
+			],
+			"meta": {
+				"pagination": {
+					"total_pages": 1,
+					"current_page": 1
+				}
+			}
+		}`
+
+		w.Header().Set("Content-Type", "application/vnd.api+json")
+		w.Write([]byte(mockResponse))
+	}))
+	defer mockServer.Close()
+
+	client := NewClient(mockServer.URL, "test-token")
+	budgets, err := client.GetBudgets()
+
+	if err != nil {
+		t.Fatalf("GetBudgets failed: %v", err)
+	}
+
+	if len(budgets) != 1 {
+		t.Fatalf("Expected 1 budget, got %d", len(budgets))
+	}
+
+	if budgets[0].ID != "10" {
+		t.Errorf("Expected ID 10, got %s", budgets[0].ID)
+	}
+	if budgets[0].Name != "Groceries" {
+		t.Errorf("Expected Name Groceries, got %s", budgets[0].Name)
+	}
+}
+
+func TestGetCategories(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("Expected GET request, got %s", r.Method)
+		}
+		if r.URL.Path != "/categories" {
+			t.Errorf("Expected path /categories, got %s", r.URL.Path)
+		}
+
+		mockResponse := `{
+			"data": [
+				{
+					"id": "20",
+					"attributes": {
+						"name": "Entertainment"
+					}
+				}
+			],
+			"meta": {
+				"pagination": {
+					"total_pages": 1,
+					"current_page": 1
+				}
+			}
+		}`
+
+		w.Header().Set("Content-Type", "application/vnd.api+json")
+		w.Write([]byte(mockResponse))
+	}))
+	defer mockServer.Close()
+
+	client := NewClient(mockServer.URL, "test-token")
+	categories, err := client.GetCategories()
+
+	if err != nil {
+		t.Fatalf("GetCategories failed: %v", err)
+	}
+
+	if len(categories) != 1 {
+		t.Fatalf("Expected 1 category, got %d", len(categories))
+	}
+
+	if categories[0].ID != "20" {
+		t.Errorf("Expected ID 20, got %s", categories[0].ID)
+	}
+	if categories[0].Name != "Entertainment" {
+		t.Errorf("Expected Name Entertainment, got %s", categories[0].Name)
+	}
+}
