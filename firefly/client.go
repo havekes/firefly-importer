@@ -30,6 +30,17 @@ func NewClient(baseURL, token string) *Client {
 	}
 }
 
+func (c *Client) do(req *http.Request) (*http.Response, error) {
+	req.Header.Set("Authorization", "Bearer "+c.Token)
+	req.Header.Set("Accept", "application/vnd.api+json")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	return resp, nil
+}
+
 // fireflyTransactionResponse represents the response format for getting transactions
 type fireflyTransactionResponse struct {
 	Data []struct {
@@ -55,12 +66,9 @@ func (c *Client) GetRecentTransactions(accountID string, daysOffset int) ([]mode
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.Token)
-	req.Header.Set("Accept", "application/vnd.api+json")
-
-	resp, err := c.HTTPClient.Do(req)
+	resp, err := c.do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -116,12 +124,9 @@ func (c *Client) GetAccounts() ([]models.Account, error) {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.Token)
-	req.Header.Set("Accept", "application/vnd.api+json")
-
-	resp, err := c.HTTPClient.Do(req)
+	resp, err := c.do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -179,12 +184,9 @@ func (c *Client) getPaginatedBasicResources(endpoint string) ([]basicResource, e
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 
-		req.Header.Set("Authorization", "Bearer "+c.Token)
-		req.Header.Set("Accept", "application/vnd.api+json")
-
-		resp, err := c.HTTPClient.Do(req)
+		resp, err := c.do(req)
 		if err != nil {
-			return nil, fmt.Errorf("request failed: %w", err)
+			return nil, err
 		}
 
 		if resp.StatusCode != http.StatusOK {
@@ -302,13 +304,11 @@ func (c *Client) StoreTransaction(tx models.Transaction) error {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.Token)
-	req.Header.Set("Accept", "application/vnd.api+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.HTTPClient.Do(req)
+	resp, err := c.do(req)
 	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
+		return err
 	}
 	defer resp.Body.Close()
 
