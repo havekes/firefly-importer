@@ -42,6 +42,15 @@ func ParseCSV(r io.Reader) ([]models.Transaction, error) {
 
 	var transactions []models.Transaction
 
+	// Helper to safely get column value by name
+	getCol := func(record []string, name string) string {
+		idx, ok := colMap[name]
+		if !ok || idx >= len(record) {
+			return ""
+		}
+		return strings.TrimSpace(record[idx])
+	}
+
 	for {
 		record, err := csvReader.Read()
 		if err != nil {
@@ -51,16 +60,7 @@ func ParseCSV(r io.Reader) ([]models.Transaction, error) {
 			return nil, err
 		}
 
-		// Helper to safely get column value by name
-		getCol := func(name string) string {
-			idx, ok := colMap[name]
-			if !ok || idx >= len(record) {
-				return ""
-			}
-			return strings.TrimSpace(record[idx])
-		}
-
-		dateStr := getCol("date")
+		dateStr := getCol(record, "date")
 		if dateStr == "" {
 			continue
 		}
@@ -70,12 +70,12 @@ func ParseCSV(r io.Reader) ([]models.Transaction, error) {
 			continue // Skip rows with invalid date formats
 		}
 
-		description := getCol("description")
+		description := getCol(record, "description")
 		if description == "" {
 			continue
 		}
 
-		amountStr := getCol("amount")
+		amountStr := getCol(record, "amount")
 		amount, err := strconv.ParseFloat(amountStr, 64)
 		if err != nil {
 			continue // Skip rows with invalid amounts
@@ -84,7 +84,7 @@ func ParseCSV(r io.Reader) ([]models.Transaction, error) {
 			amount = -amount // Ensure absolute value
 		}
 
-		txType := strings.ToLower(getCol("type"))
+		txType := strings.ToLower(getCol(record, "type"))
 		if txType == "" {
 			continue
 		}

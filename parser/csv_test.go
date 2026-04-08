@@ -13,6 +13,7 @@ func TestParseCSV(t *testing.T) {
 		expectedLen   int
 		expectError   bool
 		errorContains string
+		verifyFirst   *models.Transaction
 	}{
 		{
 			name: "Valid CSV",
@@ -22,6 +23,13 @@ func TestParseCSV(t *testing.T) {
 invalid,bad_row,amount,error`,
 			expectedLen: 2,
 			expectError: false,
+			verifyFirst: &models.Transaction{
+				Date:        "2023-10-01",
+				Description: "Groceries",
+				Amount:      45.50,
+				Type:        "withdrawal",
+				Status:      models.StatusPending,
+			},
 		},
 		{
 			name: "Different Column Order",
@@ -30,6 +38,13 @@ invalid,bad_row,amount,error`,
 1500.00,deposit,Salary,2023-10-02`,
 			expectedLen: 2,
 			expectError: false,
+			verifyFirst: &models.Transaction{
+				Date:        "2023-10-01",
+				Description: "Groceries",
+				Amount:      45.50,
+				Type:        "withdrawal",
+				Status:      models.StatusPending,
+			},
 		},
 		{
 			name: "Missing Amount Column",
@@ -79,22 +94,26 @@ invalid,bad_row,amount,error`,
 				t.Errorf("Expected %d transactions, got %d", tt.expectedLen, len(txs))
 			}
 
-			if len(txs) > 0 && tt.name == "Valid CSV" {
-				// Verify first transaction of Valid CSV
-				if txs[0].Date != "2023-10-01" {
-					t.Errorf("Expected Date 2023-10-01, got %s", txs[0].Date)
+			if tt.verifyFirst != nil {
+				if len(txs) == 0 {
+					t.Fatalf("Expected at least 1 transaction to verify, got 0")
 				}
-				if txs[0].Description != "Groceries" {
-					t.Errorf("Expected Description Groceries, got %s", txs[0].Description)
+				got := txs[0]
+				want := tt.verifyFirst
+				if got.Date != want.Date {
+					t.Errorf("Expected Date %s, got %s", want.Date, got.Date)
 				}
-				if txs[0].Amount != 45.50 {
-					t.Errorf("Expected Amount 45.50, got %f", txs[0].Amount)
+				if got.Description != want.Description {
+					t.Errorf("Expected Description %s, got %s", want.Description, got.Description)
 				}
-				if txs[0].Type != "withdrawal" {
-					t.Errorf("Expected Type withdrawal, got %s", txs[0].Type)
+				if got.Amount != want.Amount {
+					t.Errorf("Expected Amount %f, got %f", want.Amount, got.Amount)
 				}
-				if txs[0].Status != models.StatusPending {
-					t.Errorf("Expected Status Pending, got %s", txs[0].Status)
+				if got.Type != want.Type {
+					t.Errorf("Expected Type %s, got %s", want.Type, got.Type)
+				}
+				if got.Status != want.Status {
+					t.Errorf("Expected Status %s, got %s", want.Status, got.Status)
 				}
 			}
 		})
