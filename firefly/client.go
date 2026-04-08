@@ -30,6 +30,37 @@ func NewClient(baseURL, token string) *Client {
 	}
 }
 
+func (c *Client) do(req *http.Request, expectedStatus ...int) (*http.Response, error) {
+	req.Header.Set("Authorization", "Bearer "+c.Token)
+	req.Header.Set("Accept", "application/vnd.api+json")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+
+	if len(expectedStatus) > 0 {
+		found := false
+		for _, s := range expectedStatus {
+			if resp.StatusCode == s {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			bodyBytes, err := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if err != nil {
+				return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
+			}
+			return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+		}
+	}
+
+	return resp, nil
+}
+
 // fireflyTransactionResponse represents the response format for getting transactions
 type fireflyTransactionResponse struct {
 	Data []struct {
@@ -55,22 +86,11 @@ func (c *Client) GetRecentTransactions(accountID string, daysOffset int) ([]mode
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.Token)
-	req.Header.Set("Accept", "application/vnd.api+json")
-
-	resp, err := c.HTTPClient.Do(req)
+	resp, err := c.do(req, http.StatusOK)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		return nil, err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
-		}
-		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
-	}
 
 	var fireflyResp fireflyTransactionResponse
 	if err := json.NewDecoder(resp.Body).Decode(&fireflyResp); err != nil {
@@ -116,22 +136,11 @@ func (c *Client) GetAccounts() ([]models.Account, error) {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.Token)
-	req.Header.Set("Accept", "application/vnd.api+json")
-
-	resp, err := c.HTTPClient.Do(req)
+	resp, err := c.do(req, http.StatusOK)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		return nil, err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
-		}
-		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
-	}
 
 	var fireflyResp models.AccountResponse
 	if err := json.NewDecoder(resp.Body).Decode(&fireflyResp); err != nil {
@@ -179,33 +188,31 @@ func (c *Client) getPaginatedBasicResources(endpoint string) ([]basicResource, e
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 
-		req.Header.Set("Authorization", "Bearer "+c.Token)
-		req.Header.Set("Accept", "application/vnd.api+json")
-
-		resp, err := c.HTTPClient.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("request failed: %w", err)
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			bodyBytes, err := io.ReadAll(resp.Body)
-			resp.Body.Close()
+		err = func() error {
+			resp, err := c.do(req, http.StatusOK)
 			if err != nil {
-				return nil, fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
+				return err
 			}
-			return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(bodyBytes))
+			defer resp.Body.Close()
+
+			var pageResp paginatedResponse
+			if err := json.NewDecoder(resp.Body).Decode(&pageResp); err != nil {
+				return fmt.Errorf("failed to decode response: %w", err)
+			}
+
+			allResources = append(allResources, pageResp.Data...)
+
+			if pageResp.Meta.Pagination.TotalPages == 0 || page >= pageResp.Meta.Pagination.TotalPages {
+				page = -1 // signal completion
+			}
+			return nil
+		}()
+
+		if err != nil {
+			return nil, err
 		}
 
-		var pageResp paginatedResponse
-		if err := json.NewDecoder(resp.Body).Decode(&pageResp); err != nil {
-			resp.Body.Close()
-			return nil, fmt.Errorf("failed to decode response: %w", err)
-		}
-		resp.Body.Close()
-
-		allResources = append(allResources, pageResp.Data...)
-
-		if pageResp.Meta.Pagination.TotalPages == 0 || page >= pageResp.Meta.Pagination.TotalPages {
+		if page == -1 {
 			break
 		}
 		page++
@@ -302,23 +309,13 @@ func (c *Client) StoreTransaction(tx models.Transaction) error {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.Token)
-	req.Header.Set("Accept", "application/vnd.api+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.HTTPClient.Do(req)
+	resp, err := c.do(req, http.StatusOK, http.StatusCreated)
 	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
+		return err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		respBodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("unexpected status code %d and failed to read response body: %w", resp.StatusCode, err)
-		}
-		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(respBodyBytes))
-	}
 
 	return nil
 }
