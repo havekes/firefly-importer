@@ -184,3 +184,95 @@ func TestGetAccounts(t *testing.T) {
 		t.Errorf("Expected Name Checking Account, got %s", accounts[0].Name)
 	}
 }
+
+func TestGetResources(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		endpoint     string
+		mockResponse string
+		callFunc     func(*Client) (any, error)
+		expectedLen  int
+		verifyFirst  func(t *testing.T, item any)
+	}{
+		{
+			name:     "GetBudgets",
+			endpoint: "/budgets",
+			mockResponse: `{
+				"data": [{"id": "10", "attributes": {"name": "Groceries"}}],
+				"meta": {"pagination": {"total_pages": 1, "current_page": 1}}
+			}`,
+			callFunc: func(c *Client) (any, error) { return c.GetBudgets() },
+			expectedLen: 1,
+			verifyFirst: func(t *testing.T, item any) {
+				budget := item.(models.Budget)
+				if budget.ID != "10" {
+					t.Errorf("Expected ID 10, got %s", budget.ID)
+				}
+				if budget.Name != "Groceries" {
+					t.Errorf("Expected Name Groceries, got %s", budget.Name)
+				}
+			},
+		},
+		{
+			name:     "GetCategories",
+			endpoint: "/categories",
+			mockResponse: `{
+				"data": [{"id": "20", "attributes": {"name": "Entertainment"}}],
+				"meta": {"pagination": {"total_pages": 1, "current_page": 1}}
+			}`,
+			callFunc: func(c *Client) (any, error) { return c.GetCategories() },
+			expectedLen: 1,
+			verifyFirst: func(t *testing.T, item any) {
+				category := item.(models.Category)
+				if category.ID != "20" {
+					t.Errorf("Expected ID 20, got %s", category.ID)
+				}
+				if category.Name != "Entertainment" {
+					t.Errorf("Expected Name Entertainment, got %s", category.Name)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != tt.endpoint {
+					t.Errorf("Expected path %s, got %s", tt.endpoint, r.URL.Path)
+				}
+				w.Header().Set("Content-Type", "application/vnd.api+json")
+				w.Write([]byte(tt.mockResponse))
+			}))
+			defer mockServer.Close()
+
+			client := NewClient(mockServer.URL, "test-token")
+			result, err := tt.callFunc(client)
+
+			if err != nil {
+				t.Fatalf("%s failed: %v", tt.name, err)
+			}
+
+			// Using reflection to check length as result is any (slice)
+			switch items := result.(type) {
+			case []models.Budget:
+				if len(items) != tt.expectedLen {
+					t.Fatalf("Expected %d budgets, got %d", tt.expectedLen, len(items))
+				}
+				if tt.expectedLen > 0 {
+					tt.verifyFirst(t, items[0])
+				}
+			case []models.Category:
+				if len(items) != tt.expectedLen {
+					t.Fatalf("Expected %d categories, got %d", tt.expectedLen, len(items))
+				}
+				if tt.expectedLen > 0 {
+					tt.verifyFirst(t, items[0])
+				}
+			default:
+				t.Fatalf("Unknown result type: %T", result)
+			}
+		})
+	}
+}
