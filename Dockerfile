@@ -39,4 +39,7 @@ COPY --from=builder /app/firefly-importer .
 
 EXPOSE 8080
 
+ARG APP_VERSION
+ENV APP_VERSION=${APP_VERSION}
+
 CMD ["/app/firefly-importer"]

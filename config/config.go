@@ -19,6 +19,7 @@ type Config struct {
 	CSRFKey      string
 	Hostname     string
 	Debug        bool
+	AppVersion   string
 }
 
 func LoadConfig() *Config {
@@ -40,6 +41,7 @@ func LoadConfig() *Config {
 		CSRFKey:      os.Getenv("CSRF_KEY"),
 		Hostname:     os.Getenv("HOSTNAME"),
 		Debug:        debugBool,
+		AppVersion:   os.Getenv("APP_VERSION"),
 	}
 
 	return config

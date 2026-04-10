@@ -30,6 +30,7 @@ type PageData struct {
 	CSRFField   template.HTML
 	CSRFToken   string
 	Error       string
+	AppVersion  string
 }
 
 type AppHandler struct {
@@ -47,9 +48,12 @@ func NewAppHandler(client *firefly.Client, cfg *config.Config, dbConn *sql.DB) *
 }
 
 // renderPage executes the pre-parsed index.html template with the given data.
-func renderPage(w http.ResponseWriter, r *http.Request, data PageData) {
+func (h *AppHandler) renderPage(w http.ResponseWriter, r *http.Request, data PageData) {
 	data.CSRFField = csrf.TemplateField(r)
 	data.CSRFToken = csrf.Token(r)
+	if h.Config != nil {
+		data.AppVersion = h.Config.AppVersion
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := Templates.ExecuteTemplate(w, "index.html", data); err != nil {
 		// Headers already sent; log only.
@@ -90,7 +94,7 @@ func (h *AppHandler) renderError(w http.ResponseWriter, r *http.Request, statusC
 	w.WriteHeader(statusCode)
 
 	accounts, _ := h.Client.GetAccounts() // best-effort; ignore error here
-	renderPage(w, r, PageData{
+	h.renderPage(w, r, PageData{
 		Accounts: accounts,
 		Error:    errMsg,
 	})
@@ -104,7 +108,7 @@ func (h *AppHandler) IndexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderPage(w, r, PageData{Accounts: accounts})
+	h.renderPage(w, r, PageData{Accounts: accounts})
 }
 
 // UploadHandler handles POST /upload
@@ -213,7 +217,7 @@ func (h *AppHandler) UploadHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to re-fetch categories: %v", err)
 	}
 
-	renderPage(w, r, PageData{
+	h.renderPage(w, r, PageData{
 		Accounts:    accounts,
 		Budgets:     budgets,
 		Categories:  categories,
