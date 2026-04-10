@@ -252,16 +252,22 @@ func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 	errorCount := 0
 	var firstErr error
 
+	var toAdd []models.Transaction
 	for _, tx := range req.Transactions {
 		if tx.Status == models.StatusAdded {
-			if err := h.Client.StoreTransaction(tx); err != nil {
-				log.Printf("SaveHandler: failed to store transaction %q: %v", tx.Description, err)
-				if firstErr == nil {
-					firstErr = err
-				}
-				errorCount++
-			} else {
-				addedCount++
+			toAdd = append(toAdd, tx)
+		}
+	}
+
+	if len(toAdd) > 0 {
+		if err := h.Client.StoreTransactions(toAdd); err != nil {
+			log.Printf("SaveHandler: failed to store transactions: %v", err)
+			firstErr = err
+			errorCount = len(toAdd)
+		} else {
+			addedCount = len(toAdd)
+
+			for _, tx := range toAdd {
 				// If the description was edited mapping to a new name or budget/category were added, save the mapping
 				if tx.OriginalDescription != "" && (tx.OriginalDescription != tx.Description || tx.BudgetName != "" || tx.CategoryName != "") {
 					if err := db.SaveMapping(h.DB, tx.OriginalDescription, tx.Description, tx.BudgetName, tx.CategoryName); err != nil {
