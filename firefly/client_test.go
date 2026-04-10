@@ -92,6 +92,9 @@ func TestStoreTransactions(t *testing.T) {
 		if r.Header.Get("Authorization") != "Bearer test-token" {
 			t.Errorf("Expected Bearer test-token, got %s", r.Header.Get("Authorization"))
 		}
+		if r.Header.Get("Accept") != "application/vnd.api+json" {
+			t.Errorf("Expected Accept application/vnd.api+json, got %s", r.Header.Get("Accept"))
+		}
 
 		var reqPayload fireflyStoreTransactionRequest
 		if err := json.NewDecoder(r.Body).Decode(&reqPayload); err != nil {
