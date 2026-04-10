@@ -8,6 +8,8 @@ services:
       - "${PORT:-8080}:${PORT:-8080}"
     env_file:
       - .env
+    environment:
+      APP_VERSION: "${APP_VERSION:-local-dev}"
     restart: unless-stopped
     depends_on:
       - postgres
