@@ -81,6 +81,71 @@ func TestGetRecentTransactions(t *testing.T) {
 	}
 }
 
+func TestStoreTransactions(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("Expected POST request, got %s", r.Method)
+		}
+		if r.URL.Path != "/transactions" {
+			t.Errorf("Expected path /transactions, got %s", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer test-token" {
+			t.Errorf("Expected Bearer test-token, got %s", r.Header.Get("Authorization"))
+		}
+		if r.Header.Get("Accept") != "application/vnd.api+json" {
+			t.Errorf("Expected Accept application/vnd.api+json, got %s", r.Header.Get("Accept"))
+		}
+
+		var reqPayload fireflyStoreTransactionRequest
+		if err := json.NewDecoder(r.Body).Decode(&reqPayload); err != nil {
+			t.Fatalf("Failed to decode store request: %v", err)
+		}
+
+		if len(reqPayload.Transactions) != 2 {
+			t.Fatalf("Expected 2 transactions in payload, got %d", len(reqPayload.Transactions))
+		}
+
+		tx1 := reqPayload.Transactions[0]
+		if tx1.Amount != "12.50" {
+			t.Errorf("Expected amount string '12.50', got %s", tx1.Amount)
+		}
+
+		tx2 := reqPayload.Transactions[1]
+		if tx2.Amount != "15.00" {
+			t.Errorf("Expected amount string '15.00', got %s", tx2.Amount)
+		}
+
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer mockServer.Close()
+
+	client := NewClient(mockServer.URL, "test-token")
+
+	txs := []models.Transaction{
+		{
+			Date:            "2023-12-05",
+			Description:     "Lunch",
+			Amount:          12.50,
+			Type:            "withdrawal",
+			SourceName:      "Wallet",
+			DestinationName: "Restaurant",
+		},
+		{
+			Date:            "2023-12-06",
+			Description:     "Dinner",
+			Amount:          15.00,
+			Type:            "withdrawal",
+			SourceName:      "Wallet",
+			DestinationName: "Restaurant",
+		},
+	}
+
+	err := client.StoreTransactions(txs)
+	if err != nil {
+		t.Fatalf("StoreTransactions failed: %v", err)
+	}
+}
+
 func TestStoreTransaction(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
