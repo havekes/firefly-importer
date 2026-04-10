@@ -252,7 +252,7 @@ func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 	errorCount := 0
 	var firstErr error
 
-	toAdd := make([]models.Transaction, len(req.Transactions))
+	var toAdd []models.Transaction
 	for _, tx := range req.Transactions {
 		if tx.Status == models.StatusAdded {
 			toAdd = append(toAdd, tx)
