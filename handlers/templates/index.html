@@ -169,7 +169,7 @@
             });
             document.getElementById('save-payload').value = JSON.stringify({ transactions: payload });
         }
-    }" x-init="toggleAll(true)" class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden"
+    }" x-init="toggleAll(true)" class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden py-4"
       data-transactions="{{ .ResultsJSON }}">
 
       <form hx-post="/save" hx-target="#save-result-container" hx-swap="innerHTML"
@@ -178,7 +178,7 @@
         <input type="hidden" id="save-payload" name="payload" value='' />
 
         <div
-          class="px-6 py-4 border-b border-base-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          class="px-6 py-4 border-b border-base-300 flex flex-row items-center justify-between gap-4">
           <div>
             <h2 class="text-lg font-semibold">Preview Results</h2>
             <p class="text-sm text-base-content/70">Review before saving to Firefly III</p>
