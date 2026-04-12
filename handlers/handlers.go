@@ -264,14 +264,16 @@ func (h *AppHandler) SaveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(toAdd) > 0 {
-		if err := h.Client.StoreTransactions(toAdd); err != nil {
-			log.Printf("SaveHandler: failed to store transactions: %v", err)
-			firstErr = err
-			errorCount = len(toAdd)
-		} else {
-			addedCount = len(toAdd)
+		for _, tx := range toAdd {
+			if err := h.Client.StoreTransaction(tx); err != nil {
+				log.Printf("SaveHandler: failed to store transaction: %v", err)
+				if firstErr == nil {
+					firstErr = err
+				}
+				errorCount++
+			} else {
+				addedCount++
 
-			for _, tx := range toAdd {
 				// If the description was edited mapping to a new name or budget/category were added, save the mapping
 				if tx.OriginalDescription != "" && (tx.OriginalDescription != tx.Description || tx.BudgetName != "" || tx.CategoryName != "") {
 					if err := db.SaveMapping(h.DB, tx.OriginalDescription, tx.Description, tx.BudgetName, tx.CategoryName); err != nil {
