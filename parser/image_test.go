@@ -65,3 +65,66 @@ func TestParseImage(t *testing.T) {
 		t.Errorf("Expected Type withdrawal, got %s", txs[0].Type)
 	}
 }
+
+func TestCleanVisionResponse(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "no thinking tokens or markdown",
+			input:    `[{"date":"2026-05-16"}]`,
+			expected: `[{"date":"2026-05-16"}]`,
+		},
+		{
+			name:     "with thought block",
+			input:    `<thought>The user wants transactions.</thought>[{"date":"2026-05-16"}]`,
+			expected: `[{"date":"2026-05-16"}]`,
+		},
+		{
+			name:     "with think block",
+			input:    `<think>Evaluating image...</think>[{"date":"2026-05-16"}]`,
+			expected: `[{"date":"2026-05-16"}]`,
+		},
+		{
+			name:     "case-insensitive thought block",
+			input:    `<THOUGHT>Thinking...</tHoUgHt>[{"date":"2026-05-16"}]`,
+			expected: `[{"date":"2026-05-16"}]`,
+		},
+		{
+			name:     "case-insensitive think block",
+			input:    `<THINK>Thinking...</tHiNk>[{"date":"2026-05-16"}]`,
+			expected: `[{"date":"2026-05-16"}]`,
+		},
+		{
+			name:     "unclosed thought block",
+			input:    `<thought>Thinking...`,
+			expected: ``,
+		},
+		{
+			name:     "unclosed think block",
+			input:    `<think>Thinking...`,
+			expected: ``,
+		},
+		{
+			name:     "with markdown code blocks",
+			input:    "```json\n[{\"date\":\"2026-05-16\"}]\n```",
+			expected: `[{"date":"2026-05-16"}]`,
+		},
+		{
+			name:     "thought block and markdown code blocks",
+			input:    "<thought>thinking</thought>\n```json\n[{\"date\":\"2026-05-16\"}]\n```",
+			expected: `[{"date":"2026-05-16"}]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := cleanVisionResponse(tt.input)
+			if got != tt.expected {
+				t.Errorf("cleanVisionResponse(%q) = %q; want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}

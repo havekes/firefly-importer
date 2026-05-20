@@ -130,7 +130,7 @@ func ParseImage(r io.Reader, fileDate, visionAPIURL, visionAPIKey, visionModel s
 		return nil, errors.New("no content parsed by vision API")
 	}
 
-	contentStr := vResp.Choices[0].Message.Content
+	contentStr := cleanVisionResponse(vResp.Choices[0].Message.Content)
 
 	var transactions []models.Transaction
 	if err := json.Unmarshal([]byte(contentStr), &transactions); err != nil {
@@ -144,4 +144,57 @@ func ParseImage(r io.Reader, fileDate, visionAPIURL, visionAPIKey, visionModel s
 	}
 
 	return transactions, nil
+}
+
+// cleanVisionResponse removes thinking blocks and markdown formatting from the response.
+func cleanVisionResponse(content string) string {
+	// Remove <thought>...</thought> blocks (case-insensitive)
+	for {
+		lowerContent := strings.ToLower(content)
+		startIdx := strings.Index(lowerContent, "<thought>")
+		if startIdx == -1 {
+			break
+		}
+		endIdx := strings.Index(lowerContent[startIdx:], "</thought>")
+		if endIdx == -1 {
+			// If unclosed, strip everything from <thought> to the end
+			content = content[:startIdx]
+			break
+		}
+		// endIdx is relative to content[startIdx:]
+		endIdx += startIdx + len("</thought>")
+		content = content[:startIdx] + content[endIdx:]
+	}
+
+	// Remove <think>...</think> blocks (case-insensitive)
+	for {
+		lowerContent := strings.ToLower(content)
+		startIdx := strings.Index(lowerContent, "<think>")
+		if startIdx == -1 {
+			break
+		}
+		endIdx := strings.Index(lowerContent[startIdx:], "</think>")
+		if endIdx == -1 {
+			// If unclosed, strip everything from <think> to the end
+			content = content[:startIdx]
+			break
+		}
+		// endIdx is relative to content[startIdx:]
+		endIdx += startIdx + len("</think>")
+		content = content[:startIdx] + content[endIdx:]
+	}
+
+	// Remove markdown code blocks if present
+	content = strings.TrimSpace(content)
+	if strings.HasPrefix(content, "```") {
+		// Find first newline to skip ```json or ```
+		if nlIdx := strings.Index(content, "\n"); nlIdx != -1 {
+			content = content[nlIdx+1:]
+		}
+		// Remove trailing ```
+		if strings.HasSuffix(content, "```") {
+			content = content[:len(content)-3]
+		}
+	}
+	return strings.TrimSpace(content)
 }
